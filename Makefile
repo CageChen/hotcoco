@@ -1,4 +1,4 @@
-.PHONY: build test test-asan test-tsan test-all clean
+.PHONY: build test test-asan test-tsan test-all clean format check-format lint
 
 BUILD_DIR       := build
 BUILD_ASAN_DIR  := build-asan
@@ -7,7 +7,7 @@ NPROC           := $(shell nproc)
 
 # --- Default build (Release) ---
 build:
-	cmake -B $(BUILD_DIR) -G Ninja -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -DBUILD_EXAMPLES=ON
+	cmake -B $(BUILD_DIR) -G Ninja -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -DBUILD_EXAMPLES=ON -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 	ninja -C $(BUILD_DIR) -j$(NPROC)
 
 # --- Test (default build) ---
@@ -32,3 +32,15 @@ test-all: test test-asan test-tsan
 # --- Clean all build directories ---
 clean:
 	rm -rf $(BUILD_DIR) $(BUILD_ASAN_DIR) $(BUILD_TSAN_DIR)
+
+# --- Format all source files in-place ---
+format:
+	find include src tests examples -name '*.cpp' -o -name '*.hpp' | xargs clang-format -i
+
+# --- Check formatting (for CI, exits non-zero on diff) ---
+check-format:
+	find include src tests examples -name '*.cpp' -o -name '*.hpp' | xargs clang-format --dry-run --Werror
+
+# --- Run clang-tidy on all source files ---
+lint: build
+	run-clang-tidy -p $(BUILD_DIR) -header-filter='include/hotcoco/.*'
