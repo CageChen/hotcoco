@@ -2,14 +2,14 @@
 // TaskGroup Tests
 // ============================================================================
 
-#include <gtest/gtest.h>
-
-#include <atomic>
+#include "hotcoco/core/task_group.hpp"
 
 #include "hotcoco/core/task.hpp"
-#include "hotcoco/core/task_group.hpp"
 #include "hotcoco/io/libuv_executor.hpp"
 #include "hotcoco/sync/sync_wait.hpp"
+
+#include <atomic>
+#include <gtest/gtest.h>
 
 using namespace hotcoco;
 

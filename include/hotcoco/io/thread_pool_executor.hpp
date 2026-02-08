@@ -27,6 +27,9 @@
 
 #pragma once
 
+#include "hotcoco/io/executor.hpp"
+#include "hotcoco/io/thread_utils.hpp"
+
 #include <atomic>
 #include <chrono>
 #include <condition_variable>
@@ -37,16 +40,13 @@
 #include <thread>
 #include <vector>
 
-#include "hotcoco/io/executor.hpp"
-#include "hotcoco/io/thread_utils.hpp"
-
 namespace hotcoco {
 
 // ============================================================================
 // ThreadPoolExecutor
 // ============================================================================
 class ThreadPoolExecutor : public Executor {
-public:
+   public:
     // ========================================================================
     // Options
     // ========================================================================
@@ -85,95 +85,91 @@ public:
     // Non-copyable, non-movable
     ThreadPoolExecutor(const ThreadPoolExecutor&) = delete;
     ThreadPoolExecutor& operator=(const ThreadPoolExecutor&) = delete;
-    
+
     // ========================================================================
     // Executor Interface Implementation
     // ========================================================================
-    
+
     // Run until Stop() is called or no more work
     void Run() override;
-    
+
     // Run one iteration (process one task if available)
     void RunOnce() override;
-    
+
     // Signal all workers to stop
     void Stop() override;
-    
+
     // Check if running
     bool IsRunning() const override;
-    
+
     // Schedule a coroutine to run on a worker thread
     void Schedule(std::coroutine_handle<> handle) override;
-    
+
     // Schedule a coroutine to run after a delay
-    void ScheduleAfter(std::chrono::milliseconds delay,
-                       std::coroutine_handle<> handle) override;
-    
+    void ScheduleAfter(std::chrono::milliseconds delay, std::coroutine_handle<> handle) override;
+
     // Post a callback to run on a worker thread
     void Post(std::function<void()> callback) override;
-    
+
     // ========================================================================
     // Thread Pool Specific
     // ========================================================================
-    
+
     // Get the number of worker threads
     size_t NumThreads() const { return workers_.size(); }
-    
+
     // Get the number of pending tasks
     size_t PendingTasks() const;
-    
-private:
+
+   private:
     // Work item: either a coroutine handle or a callback
     struct WorkItem {
         std::coroutine_handle<> handle{nullptr};
         std::function<void()> callback;
-        
+
         explicit WorkItem(std::coroutine_handle<> h) : handle(h) {}
         explicit WorkItem(std::function<void()> cb) : callback(std::move(cb)) {}
     };
-    
+
     // Delayed work item
     struct DelayedWork {
         std::chrono::steady_clock::time_point when;
         std::coroutine_handle<> handle;
-        
-        bool operator>(const DelayedWork& other) const {
-            return when > other.when;
-        }
+
+        bool operator>(const DelayedWork& other) const { return when > other.when; }
     };
-    
+
     // Worker thread function (index for affinity assignment)
     void WorkerLoop(size_t worker_index);
-    
+
     // Timer thread function (handles delayed work)
     void TimerLoop();
-    
+
     // Internal: get next work item (blocks if queue is empty)
     bool TryGetWork(WorkItem& item);
 
     // Internal: initialize worker threads
     void InitWorkers();
-    
+
     // Configuration
     Options options_;
 
     // Worker threads
     std::vector<std::thread> workers_;
-    
+
     // Timer thread for delayed execution
     std::thread timer_thread_;
-    
+
     // Work queue
     std::queue<WorkItem> work_queue_;
     mutable std::mutex queue_mutex_;
     std::condition_variable work_available_;
-    
+
     // Delayed work (priority queue, earliest first)
-    std::priority_queue<DelayedWork, std::vector<DelayedWork>,
-                        std::greater<DelayedWork>> delayed_queue_;
+    std::priority_queue<DelayedWork, std::vector<DelayedWork>, std::greater<DelayedWork>> delayed_queue_;
     std::mutex delayed_mutex_;
     std::condition_variable delayed_cv_;
-    
+
     // State
     std::atomic<bool> running_{false};
     std::atomic<bool> stopping_{false};

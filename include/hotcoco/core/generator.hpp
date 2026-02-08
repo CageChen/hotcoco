@@ -63,7 +63,7 @@ class Generator;
 //
 template <typename T>
 class GeneratorPromise {
-public:
+   public:
     using value_type = std::remove_reference_t<T>;
     using reference = value_type&;
     using pointer = value_type*;
@@ -130,11 +130,9 @@ public:
     // ========================================================================
     reference GetValue() const noexcept { return *current_value_; }
 
-    bool HasValue() const noexcept {
-        return current_value_ != nullptr;
-    }
+    bool HasValue() const noexcept { return current_value_ != nullptr; }
 
-private:
+   private:
     pointer current_value_ = nullptr;
     std::optional<value_type> owned_value_;  // For rvalue yields
 };
@@ -148,7 +146,7 @@ private:
 //
 template <typename T>
 class GeneratorIterator {
-public:
+   public:
     // Iterator traits for STL compatibility
     using iterator_category = std::input_iterator_tag;
     using difference_type = std::ptrdiff_t;
@@ -179,29 +177,19 @@ public:
     }
 
     // Post-increment (required by input_iterator)
-    void operator++(int) {
-        ++(*this);
-    }
+    void operator++(int) { ++(*this); }
 
     // Dereference: Get the current yielded value
-    reference operator*() const {
-        return handle_.promise().GetValue();
-    }
+    reference operator*() const { return handle_.promise().GetValue(); }
 
-    pointer operator->() const {
-        return std::addressof(operator*());
-    }
+    pointer operator->() const { return std::addressof(operator*()); }
 
     // Comparison: Only compare with end sentinel
-    bool operator==(const GeneratorIterator& other) const noexcept {
-        return handle_ == other.handle_;
-    }
+    bool operator==(const GeneratorIterator& other) const noexcept { return handle_ == other.handle_; }
 
-    bool operator!=(const GeneratorIterator& other) const noexcept {
-        return !(*this == other);
-    }
+    bool operator!=(const GeneratorIterator& other) const noexcept { return !(*this == other); }
 
-private:
+   private:
     Handle handle_ = nullptr;
 };
 
@@ -214,7 +202,7 @@ private:
 //
 template <typename T>
 class Generator {
-public:
+   public:
     using promise_type = GeneratorPromise<T>;
     using Handle = std::coroutine_handle<promise_type>;
     using iterator = GeneratorIterator<T>;
@@ -235,8 +223,7 @@ public:
     Generator(const Generator&) = delete;
     Generator& operator=(const Generator&) = delete;
 
-    Generator(Generator&& other) noexcept
-        : handle_(std::exchange(other.handle_, nullptr)) {}
+    Generator(Generator&& other) noexcept : handle_(std::exchange(other.handle_, nullptr)) {}
 
     Generator& operator=(Generator&& other) noexcept {
         if (this != &other) {
@@ -266,11 +253,9 @@ public:
     }
 
     // end(): Sentinel for end of sequence
-    iterator end() noexcept {
-        return iterator{};
-    }
+    iterator end() noexcept { return iterator{}; }
 
-private:
+   private:
     Handle handle_;
 };
 

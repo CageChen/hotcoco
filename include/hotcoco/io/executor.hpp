@@ -48,7 +48,7 @@ namespace hotcoco {
 // Executor - Abstract Event Loop Interface
 // ============================================================================
 class Executor {
-public:
+   public:
     virtual ~Executor() = default;
 
     // ========================================================================
@@ -77,8 +77,7 @@ public:
 
     // Schedule a coroutine to run after a delay
     // Used by AsyncSleep and timer-based operations
-    virtual void ScheduleAfter(std::chrono::milliseconds delay,
-                               std::coroutine_handle<> handle) = 0;
+    virtual void ScheduleAfter(std::chrono::milliseconds delay, std::coroutine_handle<> handle) = 0;
 
     // ========================================================================
     // Callbacks (for non-coroutine integration)
@@ -103,14 +102,14 @@ void SetCurrentExecutor(Executor* executor);
 
 // RAII guard for setting/restoring current executor
 class ExecutorGuard {
-public:
+   public:
     explicit ExecutorGuard(Executor* executor);
     ~ExecutorGuard();
 
     ExecutorGuard(const ExecutorGuard&) = delete;
     ExecutorGuard& operator=(const ExecutorGuard&) = delete;
 
-private:
+   private:
     Executor* previous_;
 };
 

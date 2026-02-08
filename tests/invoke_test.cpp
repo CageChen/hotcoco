@@ -2,13 +2,13 @@
 // Invoke Tests
 // ============================================================================
 
-#include <gtest/gtest.h>
-
-#include <string>
-
 #include "hotcoco/core/invoke.hpp"
+
 #include "hotcoco/core/task.hpp"
 #include "hotcoco/sync/sync_wait.hpp"
+
+#include <gtest/gtest.h>
+#include <string>
 
 using namespace hotcoco;
 
@@ -17,27 +17,21 @@ using namespace hotcoco;
 // ============================================================================
 
 TEST(InvokeTest, BasicLambdaReturnsInt) {
-    auto make_task = []() -> Task<int> {
-        co_return 42;
-    };
+    auto make_task = []() -> Task<int> { co_return 42; };
 
     int result = SyncWait(Invoke(make_task));
     EXPECT_EQ(result, 42);
 }
 
 TEST(InvokeTest, LambdaWithArgs) {
-    auto make_task = [](int a, int b) -> Task<int> {
-        co_return a + b;
-    };
+    auto make_task = [](int a, int b) -> Task<int> { co_return a + b; };
 
     int result = SyncWait(Invoke(make_task, 10, 32));
     EXPECT_EQ(result, 42);
 }
 
 TEST(InvokeTest, LambdaReturnsString) {
-    auto make_task = [](const char* prefix) -> Task<std::string> {
-        co_return std::string(prefix) + " world";
-    };
+    auto make_task = [](const char* prefix) -> Task<std::string> { co_return std::string(prefix) + " world"; };
 
     std::string result = SyncWait(Invoke(make_task, "hello"));
     EXPECT_EQ(result, "hello world");
@@ -62,9 +56,7 @@ TEST(InvokeTest, VoidLambda) {
 TEST(InvokeTest, CaptureByValueIsSafe) {
     // The lambda captures 'value' by value. Even if the original variable
     // is destroyed, the copy on the coroutine frame remains valid.
-    auto make_task = [](int value) -> Task<int> {
-        co_return value * 2;
-    };
+    auto make_task = [](int value) -> Task<int> { co_return value * 2; };
 
     int result = SyncWait(Invoke(make_task, 21));
     EXPECT_EQ(result, 42);
@@ -75,9 +67,7 @@ TEST(InvokeTest, FunctorCopiedOntoFrame) {
     // We use a stateful functor to test this.
     struct Adder {
         int base;
-        Task<int> operator()(int x) const {
-            co_return base + x;
-        }
+        Task<int> operator()(int x) const { co_return base + x; }
     };
 
     Adder adder{100};
@@ -86,9 +76,7 @@ TEST(InvokeTest, FunctorCopiedOntoFrame) {
 }
 
 TEST(InvokeTest, MultipleInvocations) {
-    auto make_task = [](int x) -> Task<int> {
-        co_return x * x;
-    };
+    auto make_task = [](int x) -> Task<int> { co_return x* x; };
 
     int r1 = SyncWait(Invoke(make_task, 3));
     int r2 = SyncWait(Invoke(make_task, 7));
@@ -100,9 +88,7 @@ TEST(InvokeTest, MultipleInvocations) {
 }
 
 TEST(InvokeTest, LambdaWithMoveOnlyArg) {
-    auto make_task = [](std::unique_ptr<int> p) -> Task<int> {
-        co_return *p;
-    };
+    auto make_task = [](std::unique_ptr<int> p) -> Task<int> { co_return *p; };
 
     auto ptr = std::make_unique<int>(42);
     int result = SyncWait(Invoke(make_task, std::move(ptr)));
@@ -123,4 +109,3 @@ TEST(InvokeTest, VoidWithArgs) {
     SyncWait(Invoke(make_task, 10, 32));
     EXPECT_EQ(result, 42);
 }
-

@@ -2,135 +2,140 @@
 // Frame Pool Tests
 // ============================================================================
 
-#include <gtest/gtest.h>
+#include "hotcoco/core/frame_pool.hpp"
 
+#include <gtest/gtest.h>
 #include <thread>
 #include <vector>
-
-#include "hotcoco/core/frame_pool.hpp"
 
 using namespace hotcoco;
 
 // Under ASan, FramePool bypasses pooling (uses raw new/delete), so
 // pool-specific behavior tests (stats, reuse, bucket routing) are skipped.
-#if defined(__SANITIZE_ADDRESS__) || (defined(__has_feature) && __has_feature(address_sanitizer))
-#define FRAMEPOOL_BYPASS_ACTIVE 1
-#else
-#define FRAMEPOOL_BYPASS_ACTIVE 0
-#endif
+#define FRAMEPOOL_BYPASS_ACTIVE HOTCOCO_ASAN_ACTIVE
 
 // ============================================================================
 // Basic Pool Tests
 // ============================================================================
 
 TEST(FramePoolTest, AllocateDeallocate) {
-    if (FRAMEPOOL_BYPASS_ACTIVE) { GTEST_SKIP() << "FramePool bypassed under ASan"; }
+    if (FRAMEPOOL_BYPASS_ACTIVE) {
+        GTEST_SKIP() << "FramePool bypassed under ASan";
+    }
     FramePool::Clear();
     FramePool::ResetStats();
-    
+
     void* ptr = FramePool::Allocate(64);
     ASSERT_NE(ptr, nullptr);
-    
+
     FramePool::Deallocate(ptr, 64);
-    
+
     auto stats = FramePool::GetStats();
     EXPECT_EQ(stats.allocations, 1);
     EXPECT_EQ(stats.deallocations, 1);
 }
 
 TEST(FramePoolTest, PoolReuse) {
-    if (FRAMEPOOL_BYPASS_ACTIVE) { GTEST_SKIP() << "FramePool bypassed under ASan"; }
+    if (FRAMEPOOL_BYPASS_ACTIVE) {
+        GTEST_SKIP() << "FramePool bypassed under ASan";
+    }
     FramePool::Clear();
     FramePool::ResetStats();
-    
+
     // Allocate and deallocate
     void* ptr1 = FramePool::Allocate(64);
     FramePool::Deallocate(ptr1, 64);
-    
+
     // Second allocation should hit the pool
     void* ptr2 = FramePool::Allocate(64);
-    
+
     // Should get the same pointer back
     EXPECT_EQ(ptr1, ptr2);
-    
+
     auto stats = FramePool::GetStats();
     EXPECT_EQ(stats.pool_hits, 1);
     EXPECT_EQ(stats.pool_misses, 1);  // First allocation was a miss
-    
+
     FramePool::Deallocate(ptr2, 64);
 }
 
 TEST(FramePoolTest, DifferentSizeBuckets) {
-    if (FRAMEPOOL_BYPASS_ACTIVE) { GTEST_SKIP() << "FramePool bypassed under ASan"; }
+    if (FRAMEPOOL_BYPASS_ACTIVE) {
+        GTEST_SKIP() << "FramePool bypassed under ASan";
+    }
     FramePool::Clear();
     FramePool::ResetStats();
-    
+
     // Allocate from different buckets
     void* ptr64 = FramePool::Allocate(64);
     void* ptr128 = FramePool::Allocate(128);
     void* ptr256 = FramePool::Allocate(256);
-    
+
     EXPECT_NE(ptr64, ptr128);
     EXPECT_NE(ptr128, ptr256);
-    
+
     FramePool::Deallocate(ptr64, 64);
     FramePool::Deallocate(ptr128, 128);
     FramePool::Deallocate(ptr256, 256);
-    
+
     // Each should go back to its own bucket
     void* new64 = FramePool::Allocate(64);
     void* new128 = FramePool::Allocate(128);
     void* new256 = FramePool::Allocate(256);
-    
+
     EXPECT_EQ(new64, ptr64);
     EXPECT_EQ(new128, ptr128);
     EXPECT_EQ(new256, ptr256);
-    
+
     FramePool::Deallocate(new64, 64);
     FramePool::Deallocate(new128, 128);
     FramePool::Deallocate(new256, 256);
 }
 
 TEST(FramePoolTest, OversizedAllocation) {
-    if (FRAMEPOOL_BYPASS_ACTIVE) { GTEST_SKIP() << "FramePool bypassed under ASan"; }
+    if (FRAMEPOOL_BYPASS_ACTIVE) {
+        GTEST_SKIP() << "FramePool bypassed under ASan";
+    }
     FramePool::Clear();
     FramePool::ResetStats();
-    
+
     // Allocate something bigger than max bucket
     void* ptr = FramePool::Allocate(4096);
     ASSERT_NE(ptr, nullptr);
-    
+
     auto stats = FramePool::GetStats();
     EXPECT_EQ(stats.oversized_allocations, 1);
-    
+
     FramePool::Deallocate(ptr, 4096);
 }
 
 TEST(FramePoolTest, PoolLimitRespected) {
-    if (FRAMEPOOL_BYPASS_ACTIVE) { GTEST_SKIP() << "FramePool bypassed under ASan"; }
+    if (FRAMEPOOL_BYPASS_ACTIVE) {
+        GTEST_SKIP() << "FramePool bypassed under ASan";
+    }
     FramePool::Clear();
     FramePool::ResetStats();
-    
+
     constexpr size_t count = FramePool::kMaxPooledPerBucket + 10;
     std::vector<void*> ptrs;
-    
+
     // Allocate more than pool limit
     for (size_t i = 0; i < count; i++) {
         ptrs.push_back(FramePool::Allocate(64));
     }
-    
+
     // Deallocate all - only kMaxPooledPerBucket should be pooled
     for (void* ptr : ptrs) {
         FramePool::Deallocate(ptr, 64);
     }
-    
+
     // Allocate again - should get kMaxPooledPerBucket hits
     FramePool::ResetStats();
-    
+
     for (size_t i = 0; i < FramePool::kMaxPooledPerBucket; i++) {
         FramePool::Allocate(64);
     }
-    
+
     auto stats = FramePool::GetStats();
     EXPECT_EQ(stats.pool_hits, FramePool::kMaxPooledPerBucket);
 }
@@ -144,14 +149,16 @@ struct TestPromise : PooledPromise {
 };
 
 TEST(FramePoolTest, PooledPromiseMixin) {
-    if (FRAMEPOOL_BYPASS_ACTIVE) { GTEST_SKIP() << "FramePool bypassed under ASan"; }
+    if (FRAMEPOOL_BYPASS_ACTIVE) {
+        GTEST_SKIP() << "FramePool bypassed under ASan";
+    }
     FramePool::Clear();
     FramePool::ResetStats();
-    
+
     TestPromise* p = new TestPromise();
     EXPECT_EQ(p->data, 42);
     delete p;
-    
+
     auto stats = FramePool::GetStats();
     EXPECT_EQ(stats.allocations, 1);
     EXPECT_EQ(stats.deallocations, 1);

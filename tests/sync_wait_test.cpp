@@ -2,12 +2,12 @@
 // SyncWait Tests
 // ============================================================================
 
-#include <gtest/gtest.h>
-
-#include <string>
+#include "hotcoco/sync/sync_wait.hpp"
 
 #include "hotcoco/core/task.hpp"
-#include "hotcoco/sync/sync_wait.hpp"
+
+#include <gtest/gtest.h>
+#include <string>
 
 using namespace hotcoco;
 
@@ -16,9 +16,7 @@ using namespace hotcoco;
 // ============================================================================
 
 TEST(SyncWaitTest, ReturnsString) {
-    auto task = []() -> Task<std::string> {
-        co_return "sync_wait_result";
-    };
+    auto task = []() -> Task<std::string> { co_return "sync_wait_result"; };
     EXPECT_EQ(SyncWait(task()), "sync_wait_result");
 }
 

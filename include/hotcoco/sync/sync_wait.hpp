@@ -31,12 +31,12 @@
 
 #pragma once
 
+#include "hotcoco/core/task.hpp"
+
 #include <condition_variable>
 #include <cstdlib>
 #include <mutex>
 #include <optional>
-
-#include "hotcoco/core/task.hpp"
 
 namespace hotcoco {
 
@@ -48,7 +48,7 @@ namespace detail {
 // A minimal synchronization primitive for one-shot signaling.
 //
 class SyncWaitEvent {
-public:
+   public:
     void Signal() {
         std::lock_guard lock(mutex_);
         signaled_ = true;
@@ -60,7 +60,7 @@ public:
         cv_.wait(lock, [this] { return signaled_; });
     }
 
-private:
+   private:
     std::mutex mutex_;
     std::condition_variable cv_;
     bool signaled_ = false;
@@ -78,7 +78,7 @@ class SyncWaitTask;
 
 template <typename T>
 class SyncWaitPromise {
-public:
+   public:
     SyncWaitTask<T> get_return_object() noexcept;
 
     // Start immediately (eager) - we want to run right away
@@ -106,14 +106,14 @@ public:
         }
     }
 
-private:
+   private:
     SyncWaitEvent* event_ = nullptr;
     T* result_ = nullptr;
 };
 
 template <typename T>
 class SyncWaitTask {
-public:
+   public:
     using promise_type = SyncWaitPromise<T>;
     using Handle = std::coroutine_handle<promise_type>;
 
@@ -129,7 +129,7 @@ public:
 
     promise_type& GetPromise() { return handle_.promise(); }
 
-private:
+   private:
     Handle handle_;
 };
 

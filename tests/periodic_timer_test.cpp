@@ -2,13 +2,13 @@
 // Periodic Timer Tests
 // ============================================================================
 
-#include <gtest/gtest.h>
-
-#include <chrono>
+#include "hotcoco/io/periodic_timer.hpp"
 
 #include "hotcoco/core/task.hpp"
 #include "hotcoco/io/libuv_executor.hpp"
-#include "hotcoco/io/periodic_timer.hpp"
+
+#include <chrono>
+#include <gtest/gtest.h>
 
 using namespace hotcoco;
 using namespace std::chrono_literals;

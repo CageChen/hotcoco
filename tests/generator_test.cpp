@@ -2,12 +2,11 @@
 // Generator Unit Tests
 // ============================================================================
 
-#include <gtest/gtest.h>
+#include "hotcoco/core/generator.hpp"
 
+#include <gtest/gtest.h>
 #include <string>
 #include <vector>
-
-#include "hotcoco/core/generator.hpp"
 
 using namespace hotcoco;
 
@@ -44,9 +43,7 @@ TEST(GeneratorTest, EmptyGenerator) {
 }
 
 TEST(GeneratorTest, SingleValue) {
-    auto single = []() -> Generator<int> {
-        co_yield 42;
-    };
+    auto single = []() -> Generator<int> { co_yield 42; };
 
     std::vector<int> result;
     for (int value : single()) {
@@ -207,7 +204,7 @@ TEST(GeneratorTest, DestroyMidIteration) {
     int count = 0;
     {
         auto gen = [&]() -> Generator<int> {
-            for (int i = 0; ; ++i) {
+            for (int i = 0;; ++i) {
                 count++;
                 co_yield i;
             }
@@ -255,9 +252,7 @@ TEST(GeneratorTest, NestedGenerators) {
 // which is undefined behavior on an exhausted generator.
 
 TEST(GeneratorTest, BeginOnExhaustedGenerator) {
-    auto single = []() -> Generator<int> {
-        co_yield 1;
-    };
+    auto single = []() -> Generator<int> { co_yield 1; };
 
     auto gen = single();
 

@@ -2,18 +2,16 @@
 // Executor Unit Tests
 // ============================================================================
 
-#include <gtest/gtest.h>
-
-#include <atomic>
-#include <chrono>
-#include <thread>
-
-#include "hotcoco/core/task.hpp"
 #include "hotcoco/core/schedule_on.hpp"
+#include "hotcoco/core/task.hpp"
 #include "hotcoco/io/libuv_executor.hpp"
 #include "hotcoco/io/timer.hpp"
 #include "hotcoco/sync/sync_wait.hpp"
 
+#include <atomic>
+#include <chrono>
+#include <gtest/gtest.h>
+#include <thread>
 #include <vector>
 
 using namespace hotcoco;
@@ -198,9 +196,7 @@ TEST(ExecutorTest, ScheduleAfterFromOtherThread) {
     constexpr int kTimerCount = 20;
 
     // Start the executor on its own thread
-    std::thread loop_thread([&]() {
-        executor.Run();
-    });
+    std::thread loop_thread([&]() { executor.Run(); });
 
     // Give the loop time to start
     std::this_thread::sleep_for(50ms);
@@ -218,16 +214,14 @@ TEST(ExecutorTest, ScheduleAfterFromOtherThread) {
     // Wait for all timers to fire, then stop.
     // Use a generous timeout for TSan builds (10-15x slower).
     auto deadline = std::chrono::steady_clock::now() + 5000ms;
-    while (fired.load() < kTimerCount &&
-           std::chrono::steady_clock::now() < deadline) {
+    while (fired.load() < kTimerCount && std::chrono::steady_clock::now() < deadline) {
         std::this_thread::sleep_for(10ms);
     }
     executor.Post([&]() { executor.Stop(); });
 
     loop_thread.join();
 
-    EXPECT_EQ(fired.load(), kTimerCount)
-        << "Not all timers fired; ScheduleAfter may not be thread-safe";
+    EXPECT_EQ(fired.load(), kTimerCount) << "Not all timers fired; ScheduleAfter may not be thread-safe";
 }
 
 // ============================================================================
@@ -249,9 +243,7 @@ TEST(ExecutorTest, IsRunningFromOtherThread) {
     };
     Spawn(executor, driver());
 
-    std::thread loop_thread([&]() {
-        executor.Run();
-    });
+    std::thread loop_thread([&]() { executor.Run(); });
 
     // Give the loop time to start
     std::this_thread::sleep_for(10ms);
@@ -266,8 +258,7 @@ TEST(ExecutorTest, IsRunningFromOtherThread) {
         std::this_thread::sleep_for(1ms);
     }
 
-    EXPECT_TRUE(saw_running)
-        << "IsRunning() never returned true from another thread";
+    EXPECT_TRUE(saw_running) << "IsRunning() never returned true from another thread";
 
     loop_thread.join();
 

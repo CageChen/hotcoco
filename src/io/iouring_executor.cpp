@@ -7,10 +7,10 @@
 #include "hotcoco/io/iouring_executor.hpp"
 
 #include <sys/eventfd.h>
-#include <unistd.h>
 
 #include <cassert>
 #include <cstring>
+#include <unistd.h>
 
 namespace hotcoco {
 
@@ -18,8 +18,7 @@ namespace hotcoco {
 // Construction / Destruction
 // ============================================================================
 
-IoUringExecutor::IoUringExecutor(struct io_uring ring, int eventfd)
-    : ring_(ring), eventfd_(eventfd) {
+IoUringExecutor::IoUringExecutor(struct io_uring ring, int eventfd) : ring_(ring), eventfd_(eventfd) {
     SubmitWakeupRead();
 }
 
@@ -152,8 +151,7 @@ void IoUringExecutor::Schedule(std::coroutine_handle<> handle) {
     [[maybe_unused]] ssize_t n = write(eventfd_, &val, sizeof(val));
 }
 
-void IoUringExecutor::ScheduleAfter(std::chrono::milliseconds delay,
-                                     std::coroutine_handle<> handle) {
+void IoUringExecutor::ScheduleAfter(std::chrono::milliseconds delay, std::coroutine_handle<> handle) {
     // Queue the timer request for processing on the event loop thread.
     // io_uring_get_sqe/io_uring_submit are NOT thread-safe, so we must
     // create timers only from the loop thread.

@@ -15,15 +15,15 @@
 //
 // ============================================================================
 
+#include "hotcoco/core/task.hpp"
+#include "hotcoco/http/http.hpp"
+#include "hotcoco/io/libuv_executor.hpp"
+
 #include <chrono>
 #include <ctime>
 #include <iomanip>
 #include <iostream>
 #include <sstream>
-
-#include "hotcoco/core/task.hpp"
-#include "hotcoco/http/http.hpp"
-#include "hotcoco/io/libuv_executor.hpp"
 
 using namespace hotcoco;
 
@@ -115,9 +115,11 @@ std::string GetIndexHtml() {
         </div>
         
         <div class="stats">
-            <strong>Server Time:</strong> )" << GetCurrentTime() << R"(
+            <strong>Server Time:</strong> )"
+         << GetCurrentTime() << R"(
             <br>
-            <strong>Requests Served:</strong> )" << g_request_count << R"(
+            <strong>Requests Served:</strong> )"
+         << g_request_count << R"(
         </div>
     </div>
 </body>
@@ -129,45 +131,43 @@ std::string GetIndexHtml() {
 // Handle HTTP request
 HttpResponse HandleRequest(const HttpRequest& req) {
     g_request_count++;
-    
-    std::cout << "[" << GetCurrentTime() << "] "
-              << HttpMethodToString(req.method) << " " << req.path
-              << std::endl;
-    
+
+    std::cout << "[" << GetCurrentTime() << "] " << HttpMethodToString(req.method) << " " << req.path << std::endl;
+
     // Route the request
     if (req.path == "/" || req.path == "/index.html") {
         return HttpResponse::Html(GetIndexHtml());
     }
-    
+
     if (req.path == "/api/hello") {
         return HttpResponse::Json(R"({"message": "Hello from hotcoco!", "status": "ok"})");
     }
-    
+
     if (req.path == "/api/time") {
         std::ostringstream json;
         json << R"({"time": ")" << GetCurrentTime() << R"(", "timezone": "server"})";
         return HttpResponse::Json(json.str());
     }
-    
+
     if (req.path == "/api/stats") {
         std::ostringstream json;
         json << R"({"requests": )" << g_request_count << R"(, "uptime": "running"})";
         return HttpResponse::Json(json.str());
     }
-    
+
     return HttpResponse::NotFound("404 - Page not found: " + req.path);
 }
 
 int main() {
     std::cout << "=== Hotcoco Example 05: HTTP Server ===" << std::endl;
     std::cout << std::endl;
-    
+
     auto executor_ptr = LibuvExecutor::Create().Value();
     auto& executor = *executor_ptr;
-    
+
     HttpServer server(executor, "127.0.0.1", 8080);
     server.OnRequest(HandleRequest);
-    
+
     std::cout << "Server listening on http://127.0.0.1:8080" << std::endl;
     std::cout << "Press Ctrl+C to stop" << std::endl;
     std::cout << std::endl;
@@ -176,10 +176,10 @@ int main() {
     std::cout << "  curl http://localhost:8080/api/hello" << std::endl;
     std::cout << "  curl http://localhost:8080/api/time" << std::endl;
     std::cout << std::endl;
-    
+
     auto server_task = server.Run();
     executor.Schedule(server_task.GetHandle());
     executor.Run();
-    
+
     return 0;
 }

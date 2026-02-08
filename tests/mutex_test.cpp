@@ -2,16 +2,16 @@
 // Mutex Tests
 // ============================================================================
 
-#include <gtest/gtest.h>
-
-#include <atomic>
-#include <thread>
+#include "hotcoco/sync/mutex.hpp"
 
 #include "hotcoco/core/spawn.hpp"
 #include "hotcoco/core/task.hpp"
 #include "hotcoco/io/thread_pool_executor.hpp"
-#include "hotcoco/sync/mutex.hpp"
 #include "hotcoco/sync/sync_wait.hpp"
+
+#include <atomic>
+#include <gtest/gtest.h>
+#include <thread>
 
 using namespace hotcoco;
 using namespace std::chrono_literals;
@@ -22,32 +22,32 @@ using namespace std::chrono_literals;
 
 TEST(MutexTest, LockUnlock) {
     AsyncMutex mutex;
-    
+
     auto test = [&mutex]() -> Task<void> {
         {
             auto lock = co_await mutex.Lock();
             // Critical section
         }
     };
-    
+
     SyncWait(test());
     SUCCEED();
 }
 
 TEST(MutexTest, TryLockWhenFree) {
     AsyncMutex mutex;
-    
+
     auto test = [&mutex]() -> Task<void> {
         auto lock = co_await mutex.TryLock();
         EXPECT_TRUE(lock.has_value());
     };
-    
+
     SyncWait(test());
 }
 
 TEST(MutexTest, NestedLocks) {
     AsyncMutex mutex;
-    
+
     auto test = [&mutex]() -> Task<void> {
         {
             auto lock1 = co_await mutex.Lock();
@@ -59,7 +59,7 @@ TEST(MutexTest, NestedLocks) {
             // Second acquisition works
         }
     };
-    
+
     SyncWait(test());
     SUCCEED();
 }
@@ -84,7 +84,7 @@ TEST(MutexTest, ProtectsCounter) {
     for (int i = 0; i < kIterations; i++) {
         Spawn(executor, LockAndIncrement(mutex, counter, completed));
     }
-    
+
     // Wait for completion
     auto start = std::chrono::steady_clock::now();
     while (completed.load() < kIterations) {
@@ -93,7 +93,7 @@ TEST(MutexTest, ProtectsCounter) {
             FAIL() << "Timeout: " << completed.load();
         }
     }
-    
+
     executor.Stop();
     EXPECT_EQ(counter, kIterations);
 }

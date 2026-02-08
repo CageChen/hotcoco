@@ -26,7 +26,7 @@
 
 #pragma once
 
-#include <uv.h>
+#include "hotcoco/io/executor.hpp"
 
 #include <cstdint>
 #include <functional>
@@ -34,9 +34,8 @@
 #include <queue>
 #include <string>
 #include <string_view>
+#include <uv.h>
 #include <vector>
-
-#include "hotcoco/io/executor.hpp"
 
 namespace hotcoco {
 
@@ -52,7 +51,7 @@ class LibuvExecutor;
 // Use Accept() to get new connections as TcpStream objects.
 //
 class TcpListener {
-public:
+   public:
     explicit TcpListener(LibuvExecutor& executor);
     ~TcpListener();
 
@@ -79,14 +78,14 @@ public:
     // Returns an awaitable that yields new TcpStream connections
 
     class AcceptAwaitable {
-    public:
+       public:
         explicit AcceptAwaitable(TcpListener& listener) : listener_(listener) {}
 
         bool await_ready() const noexcept;
         void await_suspend(std::coroutine_handle<> handle);
         std::unique_ptr<TcpStream> await_resume();
 
-    private:
+       private:
         TcpListener& listener_;
     };
 
@@ -98,7 +97,7 @@ public:
     LibuvExecutor& GetExecutor() { return executor_; }
     uv_loop_t* GetLoop();
 
-private:
+   private:
     friend class AcceptAwaitable;
 
     static void OnConnection(uv_stream_t* server, int status);
@@ -119,7 +118,7 @@ private:
 // All operations are async and can be co_awaited.
 //
 class TcpStream {
-public:
+   public:
     explicit TcpStream(LibuvExecutor& executor);
     ~TcpStream();
 
@@ -132,7 +131,7 @@ public:
     // ========================================================================
 
     class ConnectAwaitable {
-    public:
+       public:
         ConnectAwaitable(TcpStream& stream, const std::string& host, uint16_t port)
             : stream_(stream), host_(host), port_(port) {}
 
@@ -140,61 +139,53 @@ public:
         bool await_suspend(std::coroutine_handle<> handle);
         int await_resume() { return sync_error_ ? sync_error_ : stream_.connect_result_; }
 
-    private:
+       private:
         TcpStream& stream_;
         std::string host_;
         uint16_t port_;
         int sync_error_ = 0;  // Set on synchronous errors (await_suspend returns false)
     };
 
-    ConnectAwaitable Connect(const std::string& host, uint16_t port) {
-        return ConnectAwaitable(*this, host, port);
-    }
+    ConnectAwaitable Connect(const std::string& host, uint16_t port) { return ConnectAwaitable(*this, host, port); }
 
     // ========================================================================
     // Reading
     // ========================================================================
 
     class ReadAwaitable {
-    public:
-        ReadAwaitable(TcpStream& stream, size_t max_bytes)
-            : stream_(stream), max_bytes_(max_bytes) {}
+       public:
+        ReadAwaitable(TcpStream& stream, size_t max_bytes) : stream_(stream), max_bytes_(max_bytes) {}
 
         bool await_ready() const noexcept;
         void await_suspend(std::coroutine_handle<> handle);
         std::vector<char> await_resume();
 
-    private:
+       private:
         TcpStream& stream_;
         size_t max_bytes_;
     };
 
-    ReadAwaitable Read(size_t max_bytes = 4096) {
-        return ReadAwaitable(*this, max_bytes);
-    }
+    ReadAwaitable Read(size_t max_bytes = 4096) { return ReadAwaitable(*this, max_bytes); }
 
     // ========================================================================
     // Writing
     // ========================================================================
 
     class WriteAwaitable {
-    public:
-        WriteAwaitable(TcpStream& stream, std::string_view data)
-            : stream_(stream), data_(data) {}
+       public:
+        WriteAwaitable(TcpStream& stream, std::string_view data) : stream_(stream), data_(data) {}
 
         bool await_ready() const noexcept { return false; }
         bool await_suspend(std::coroutine_handle<> handle);
         int await_resume() { return bytes_written_; }
 
-    private:
+       private:
         TcpStream& stream_;
         std::string_view data_;
         int bytes_written_ = 0;
     };
 
-    WriteAwaitable Write(std::string_view data) {
-        return WriteAwaitable(*this, data);
-    }
+    WriteAwaitable Write(std::string_view data) { return WriteAwaitable(*this, data); }
 
     // ========================================================================
     // Connection Management
@@ -212,7 +203,7 @@ public:
     // Initialize from accepted connection
     void InitFromAccept(uv_stream_t* server);
 
-private:
+   private:
     friend class ConnectAwaitable;
     friend class ReadAwaitable;
     friend class WriteAwaitable;

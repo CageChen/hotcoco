@@ -6,10 +6,10 @@
 
 #include <sys/eventfd.h>
 #include <sys/timerfd.h>
-#include <unistd.h>
 
 #include <algorithm>
 #include <thread>
+#include <unistd.h>
 
 namespace hotcoco {
 
@@ -17,12 +17,8 @@ namespace hotcoco {
 // Constructor / Destructor
 // ============================================================================
 
-PollingExecutor::PollingExecutor(std::unique_ptr<CompletionSource> source,
-                                 Options options, int eventfd, int timerfd)
-    : source_(std::move(source)),
-      options_(options),
-      eventfd_(eventfd),
-      timerfd_(timerfd) {}
+PollingExecutor::PollingExecutor(std::unique_ptr<CompletionSource> source, Options options, int eventfd, int timerfd)
+    : source_(std::move(source)), options_(options), eventfd_(eventfd), timerfd_(timerfd) {}
 
 Result<std::unique_ptr<PollingExecutor>, std::error_code> PollingExecutor::Create(
     std::unique_ptr<CompletionSource> source) {
@@ -42,8 +38,7 @@ Result<std::unique_ptr<PollingExecutor>, std::error_code> PollingExecutor::Creat
         return Err(make_error_code(Errc::TimerfdFailed));
     }
 
-    return Ok(std::unique_ptr<PollingExecutor>(
-        new PollingExecutor(std::move(source), options, efd, tfd)));
+    return Ok(std::unique_ptr<PollingExecutor>(new PollingExecutor(std::move(source), options, efd, tfd)));
 }
 
 PollingExecutor::~PollingExecutor() {
@@ -163,8 +158,7 @@ void PollingExecutor::Schedule(std::coroutine_handle<> handle) {
     WakeUp();
 }
 
-void PollingExecutor::ScheduleAfter(std::chrono::milliseconds delay,
-                                    std::coroutine_handle<> handle) {
+void PollingExecutor::ScheduleAfter(std::chrono::milliseconds delay, std::coroutine_handle<> handle) {
     auto deadline = std::chrono::steady_clock::now() + delay;
 
     {

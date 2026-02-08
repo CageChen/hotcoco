@@ -2,12 +2,12 @@
 // DetachedTask Tests
 // ============================================================================
 
-#include <gtest/gtest.h>
+#include "hotcoco/core/detached_task.hpp"
+
+#include "hotcoco/core/task.hpp"
 
 #include <atomic>
-
-#include "hotcoco/core/detached_task.hpp"
-#include "hotcoco/core/task.hpp"
+#include <gtest/gtest.h>
 
 using namespace hotcoco;
 
@@ -125,8 +125,14 @@ TEST(DetachedTaskTest, MoveAssignment) {
     std::atomic<int> value1{0};
     std::atomic<int> value2{0};
 
-    auto make1 = [&]() -> Task<void> { value1 = 1; co_return; };
-    auto make2 = [&]() -> Task<void> { value2 = 2; co_return; };
+    auto make1 = [&]() -> Task<void> {
+        value1 = 1;
+        co_return;
+    };
+    auto make2 = [&]() -> Task<void> {
+        value2 = 2;
+        co_return;
+    };
 
     auto t1 = MakeDetached(make1());
     auto t2 = MakeDetached(make2());

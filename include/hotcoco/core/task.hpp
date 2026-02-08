@@ -39,13 +39,13 @@
 
 #pragma once
 
+#include "hotcoco/core/coroutine_compat.hpp"
+
 #include <cassert>
 #include <coroutine>
 #include <cstdlib>
 #include <optional>
 #include <utility>
-
-#include "hotcoco/core/coroutine_compat.hpp"
 
 namespace hotcoco {
 
@@ -67,7 +67,7 @@ class Task;
 //
 template <typename T>
 class TaskPromise {
-public:
+   public:
     // ========================================================================
     // CUSTOMIZATION POINT: get_return_object()
     // ========================================================================
@@ -92,9 +92,7 @@ public:
     // - Composable: You can create Tasks and pass them around before running
     // - Efficient: No work done until needed
     //
-    std::suspend_always initial_suspend() noexcept {
-        return {};
-    }
+    std::suspend_always initial_suspend() noexcept { return {}; }
 
     // ========================================================================
     // CUSTOMIZATION POINT: final_suspend()
@@ -122,8 +120,7 @@ public:
         // NOTE: Under GCC+ASan, symmetric transfer is broken (GCC bug 100897).
         // SymmetricTransfer() falls back to explicit resume() in that case.
         //
-        SymmetricTransferResult await_suspend(
-            std::coroutine_handle<TaskPromise> finishing) noexcept {
+        SymmetricTransferResult await_suspend(std::coroutine_handle<TaskPromise> finishing) noexcept {
             auto& promise = finishing.promise();
             if (promise.continuation_) {
                 return SymmetricTransfer(promise.continuation_);
@@ -134,9 +131,7 @@ public:
         void await_resume() noexcept {}
     };
 
-    FinalAwaiter final_suspend() noexcept {
-        return {};
-    }
+    FinalAwaiter final_suspend() noexcept { return {}; }
 
     // ========================================================================
     // CUSTOMIZATION POINT: return_value()
@@ -144,9 +139,7 @@ public:
     // Called when the coroutine executes: co_return <value>;
     // We store the value so the awaiter can retrieve it later.
     //
-    void return_value(T value) noexcept {
-        result_ = std::move(value);
-    }
+    void return_value(T value) noexcept { result_ = std::move(value); }
 
     // ========================================================================
     // CUSTOMIZATION POINT: unhandled_exception()
@@ -176,7 +169,7 @@ public:
         continuation_ = cont;
     }
 
-private:
+   private:
     std::optional<T> result_;
     std::coroutine_handle<> continuation_;
     bool awaited_ = false;
@@ -194,7 +187,7 @@ private:
 //
 template <typename T>
 class Task {
-public:
+   public:
     // Required by the compiler to find our promise type
     using promise_type = TaskPromise<T>;
     using Handle = std::coroutine_handle<promise_type>;
@@ -258,21 +251,17 @@ public:
         // Called when we resume (after our task completes and transfers back).
         // Return the task's result to the awaiting coroutine.
         //
-        T await_resume() noexcept {
-            return std::move(handle_.promise()).GetResult();
-        }
+        T await_resume() noexcept { return std::move(handle_.promise()).GetResult(); }
     };
 
-    Awaiter operator co_await() noexcept {
-        return Awaiter{handle_};
-    }
+    Awaiter operator co_await() noexcept { return Awaiter{handle_}; }
 
     // ========================================================================
     // Direct Access (for SyncWait and testing)
     // ========================================================================
     Handle GetHandle() const noexcept { return handle_; }
 
-private:
+   private:
     Handle handle_;
 };
 
@@ -295,15 +284,14 @@ Task<T> TaskPromise<T>::get_return_object() noexcept {
 
 template <>
 class TaskPromise<void> {
-public:
+   public:
     Task<void> get_return_object() noexcept;
 
     std::suspend_always initial_suspend() noexcept { return {}; }
 
     struct FinalAwaiter {
         bool await_ready() noexcept { return false; }
-        SymmetricTransferResult await_suspend(
-            std::coroutine_handle<TaskPromise<void>> finishing) noexcept {
+        SymmetricTransferResult await_suspend(std::coroutine_handle<TaskPromise<void>> finishing) noexcept {
             auto& promise = finishing.promise();
             if (promise.continuation_) {
                 return SymmetricTransfer(promise.continuation_);
@@ -328,14 +316,14 @@ public:
         continuation_ = cont;
     }
 
-private:
+   private:
     std::coroutine_handle<> continuation_;
     bool awaited_ = false;
 };
 
 template <>
 class Task<void> {
-public:
+   public:
     using promise_type = TaskPromise<void>;
     using Handle = std::coroutine_handle<promise_type>;
 
@@ -372,18 +360,14 @@ public:
             return SymmetricTransfer(handle_);
         }
 
-        void await_resume() noexcept {
-            handle_.promise().GetResult();
-        }
+        void await_resume() noexcept { handle_.promise().GetResult(); }
     };
 
-    Awaiter operator co_await() noexcept {
-        return Awaiter{handle_};
-    }
+    Awaiter operator co_await() noexcept { return Awaiter{handle_}; }
 
     Handle GetHandle() const noexcept { return handle_; }
 
-private:
+   private:
     Handle handle_;
 };
 

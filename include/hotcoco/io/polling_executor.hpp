@@ -33,6 +33,11 @@
 
 #pragma once
 
+#include "hotcoco/core/error.hpp"
+#include "hotcoco/core/result.hpp"
+#include "hotcoco/io/executor.hpp"
+#include "hotcoco/io/thread_utils.hpp"
+
 #include <atomic>
 #include <chrono>
 #include <coroutine>
@@ -42,11 +47,6 @@
 #include <queue>
 #include <span>
 #include <vector>
-
-#include "hotcoco/core/error.hpp"
-#include "hotcoco/core/result.hpp"
-#include "hotcoco/io/executor.hpp"
-#include "hotcoco/io/thread_utils.hpp"
 
 namespace hotcoco {
 
@@ -58,7 +58,7 @@ namespace hotcoco {
 // specific completion mechanism (RDMA CQ, DPDK ring, etc.).
 //
 class CompletionSource {
-public:
+   public:
     virtual ~CompletionSource() = default;
 
     // Poll for completions. Write up to out.size() handles to `out`.
@@ -83,14 +83,14 @@ public:
 // PollingExecutor - Generic Polling-Based Executor
 // ============================================================================
 class PollingExecutor : public Executor {
-public:
+   public:
     // Configuration options
     struct Options {
         // Idle strategy when no completions
         enum class IdleStrategy {
-            Spin,       // Busy-poll (lowest latency, highest CPU)
-            Sleep,      // Sleep briefly between polls
-            Wait,       // Call CompletionSource::Wait()
+            Spin,   // Busy-poll (lowest latency, highest CPU)
+            Sleep,  // Sleep briefly between polls
+            Wait,   // Call CompletionSource::Wait()
         };
 
         // Maximum completions to poll per iteration
@@ -118,10 +118,9 @@ public:
     };
 
     // Static factory — returns Result instead of throwing
-    static Result<std::unique_ptr<PollingExecutor>, std::error_code> Create(
-        std::unique_ptr<CompletionSource> source);
-    static Result<std::unique_ptr<PollingExecutor>, std::error_code> Create(
-        std::unique_ptr<CompletionSource> source, Options options);
+    static Result<std::unique_ptr<PollingExecutor>, std::error_code> Create(std::unique_ptr<CompletionSource> source);
+    static Result<std::unique_ptr<PollingExecutor>, std::error_code> Create(std::unique_ptr<CompletionSource> source,
+                                                                            Options options);
 
     ~PollingExecutor() override;
 
@@ -139,14 +138,12 @@ public:
     bool IsRunning() const override;
 
     void Schedule(std::coroutine_handle<> handle) override;
-    void ScheduleAfter(std::chrono::milliseconds delay,
-                       std::coroutine_handle<> handle) override;
+    void ScheduleAfter(std::chrono::milliseconds delay, std::coroutine_handle<> handle) override;
     void Post(std::function<void()> callback) override;
 
-private:
+   private:
     // Private constructor used by Create()
-    PollingExecutor(std::unique_ptr<CompletionSource> source, Options options,
-                    int eventfd, int timerfd);
+    PollingExecutor(std::unique_ptr<CompletionSource> source, Options options, int eventfd, int timerfd);
 
     // ========================================================================
     // Internal Types
@@ -155,9 +152,7 @@ private:
         std::chrono::steady_clock::time_point deadline;
         std::coroutine_handle<> handle;
 
-        bool operator>(const TimerEntry& other) const {
-            return deadline > other.deadline;
-        }
+        bool operator>(const TimerEntry& other) const { return deadline > other.deadline; }
     };
 
     // ========================================================================
@@ -173,8 +168,8 @@ private:
     std::unique_ptr<CompletionSource> source_;
     Options options_;
 
-    int eventfd_ = -1;   // For cross-thread wakeup
-    int timerfd_ = -1;   // For timer support
+    int eventfd_ = -1;  // For cross-thread wakeup
+    int timerfd_ = -1;  // For timer support
 
     std::atomic<bool> running_{false};
     std::atomic<bool> stop_requested_{false};
@@ -185,8 +180,7 @@ private:
     std::queue<std::function<void()>> callback_queue_;
 
     // Timer heap (min-heap by deadline)
-    std::priority_queue<TimerEntry, std::vector<TimerEntry>,
-                        std::greater<TimerEntry>> timer_heap_;
+    std::priority_queue<TimerEntry, std::vector<TimerEntry>, std::greater<TimerEntry>> timer_heap_;
 };
 
 }  // namespace hotcoco

@@ -2,12 +2,13 @@
 // HTTP Unit Tests
 // ============================================================================
 
-#include <gtest/gtest.h>
+#include "hotcoco/http/http.hpp"
 
 #include "hotcoco/core/task.hpp"
-#include "hotcoco/http/http.hpp"
 #include "hotcoco/io/libuv_executor.hpp"
 #include "hotcoco/io/timer.hpp"
+
+#include <gtest/gtest.h>
 
 using namespace hotcoco;
 using namespace std::chrono_literals;
@@ -45,7 +46,7 @@ TEST(HttpTest, ResponseNotFound) {
 TEST(HttpTest, ResponseSerialize) {
     auto response = HttpResponse::Ok("Test");
     std::string serialized = response.Serialize();
-    
+
     EXPECT_TRUE(serialized.find("HTTP/1.1 200 OK") != std::string::npos);
     EXPECT_TRUE(serialized.find("Content-Type: text/plain") != std::string::npos);
     EXPECT_TRUE(serialized.find("Test") != std::string::npos);
@@ -57,16 +58,16 @@ TEST(HttpTest, ResponseSerialize) {
 
 TEST(HttpTest, ParserSimpleGet) {
     HttpParser parser;
-    
-    const char* request = 
+
+    const char* request =
         "GET /hello HTTP/1.1\r\n"
         "Host: localhost\r\n"
         "\r\n";
-    
+
     bool complete = parser.Parse(request, strlen(request));
     EXPECT_TRUE(complete);
     EXPECT_FALSE(parser.HasError());
-    
+
     auto req = parser.GetRequest();
     EXPECT_EQ(req.method, HttpMethod::GET);
     EXPECT_EQ(req.path, "/hello");
@@ -75,17 +76,17 @@ TEST(HttpTest, ParserSimpleGet) {
 
 TEST(HttpTest, ParserPostWithBody) {
     HttpParser parser;
-    
-    const char* request = 
+
+    const char* request =
         "POST /api/data HTTP/1.1\r\n"
         "Host: localhost\r\n"
         "Content-Length: 11\r\n"
         "\r\n"
         "Hello World";
-    
+
     bool complete = parser.Parse(request, strlen(request));
     EXPECT_TRUE(complete);
-    
+
     auto req = parser.GetRequest();
     EXPECT_EQ(req.method, HttpMethod::POST);
     EXPECT_EQ(req.path, "/api/data");
@@ -94,15 +95,15 @@ TEST(HttpTest, ParserPostWithBody) {
 
 TEST(HttpTest, ParserQueryString) {
     HttpParser parser;
-    
-    const char* request = 
+
+    const char* request =
         "GET /search?q=test&page=1 HTTP/1.1\r\n"
         "Host: localhost\r\n"
         "\r\n";
-    
+
     parser.Parse(request, strlen(request));
     auto req = parser.GetRequest();
-    
+
     EXPECT_EQ(req.path, "/search");
     EXPECT_EQ(req.query, "q=test&page=1");
 }
@@ -178,11 +179,11 @@ TEST(HttpTest, ServerHandlesMultipleConnections) {
         int result = co_await client.Connect("127.0.0.1", 19876);
         if (result != 0) co_return;
 
-        std::string request =
-            "GET /client" + std::to_string(id) + " HTTP/1.1\r\n"
-            "Host: localhost\r\n"
-            "Connection: close\r\n"
-            "\r\n";
+        std::string request = "GET /client" + std::to_string(id) +
+                              " HTTP/1.1\r\n"
+                              "Host: localhost\r\n"
+                              "Connection: close\r\n"
+                              "\r\n";
         co_await client.Write(request);
 
         auto response = co_await client.Read();
@@ -217,70 +218,70 @@ TEST(HttpTest, ServerHandlesRequest) {
     bool request_received = false;
     std::string received_path;
     std::string response_sent;
-    
+
     // Server task - handle request manually
     auto server_task = [&]() -> Task<void> {
         TcpListener listener(executor);
         EXPECT_EQ(listener.Bind("127.0.0.1", 19877), 0);
         EXPECT_EQ(listener.Listen(), 0);
-        
+
         auto stream = co_await listener.Accept();
         EXPECT_NE(stream, nullptr);
-        
+
         // Read request
         auto data = co_await stream->Read();
         std::string request_str(data.begin(), data.end());
-        
+
         // Parse with HttpParser
         HttpParser parser;
         parser.Parse(data.data(), data.size());
         auto req = parser.GetRequest();
-        
+
         request_received = true;
         received_path = req.path;
-        
+
         // Send response
         auto response = HttpResponse::Ok("Hello from server!");
         response_sent = response.Serialize();
         co_await stream->Write(response_sent);
-        
+
         stream->Close();
         executor.Stop();
     };
-    
+
     // Client task
     auto client_task = [&]() -> Task<void> {
         co_await AsyncSleep(50ms);  // Wait for server
-        
+
         TcpStream client(executor);
         int result = co_await client.Connect("127.0.0.1", 19877);
         EXPECT_EQ(result, 0);
-        
+
         // Send HTTP request
-        const char* request = 
+        const char* request =
             "GET /test HTTP/1.1\r\n"
             "Host: localhost\r\n"
             "Connection: close\r\n"
             "\r\n";
         co_await client.Write(request);
-        
+
         // Read response
         auto response = co_await client.Read();
         std::string resp_str(response.begin(), response.end());
-        
+
         EXPECT_TRUE(resp_str.find("200 OK") != std::string::npos);
         EXPECT_TRUE(resp_str.find("Hello from server!") != std::string::npos);
-        
+
         client.Close();
     };
-    
+
     auto server = server_task();
     auto client = client_task();
-    
+
     executor.Schedule(server.GetHandle());
     executor.Schedule(client.GetHandle());
     executor.Run();
-    
+
     EXPECT_TRUE(request_received);
     EXPECT_EQ(received_path, "/test");
 }
@@ -341,8 +342,7 @@ TEST(HttpTest, Http10DefaultsToClose) {
     auto req = parser.GetRequest();
     EXPECT_EQ(req.http_major, 1);
     EXPECT_EQ(req.http_minor, 0);
-    EXPECT_FALSE(req.ShouldKeepAlive())
-        << "HTTP/1.0 without Connection header should default to close";
+    EXPECT_FALSE(req.ShouldKeepAlive()) << "HTTP/1.0 without Connection header should default to close";
 }
 
 TEST(HttpTest, Http10ExplicitKeepAlive) {
@@ -358,8 +358,7 @@ TEST(HttpTest, Http10ExplicitKeepAlive) {
     ASSERT_TRUE(complete);
 
     auto req = parser.GetRequest();
-    EXPECT_TRUE(req.ShouldKeepAlive())
-        << "HTTP/1.0 with explicit Connection: keep-alive should keep alive";
+    EXPECT_TRUE(req.ShouldKeepAlive()) << "HTTP/1.0 with explicit Connection: keep-alive should keep alive";
 }
 
 TEST(HttpTest, Http11DefaultsToKeepAlive) {
@@ -376,8 +375,7 @@ TEST(HttpTest, Http11DefaultsToKeepAlive) {
     auto req = parser.GetRequest();
     EXPECT_EQ(req.http_major, 1);
     EXPECT_EQ(req.http_minor, 1);
-    EXPECT_TRUE(req.ShouldKeepAlive())
-        << "HTTP/1.1 without Connection header should default to keep-alive";
+    EXPECT_TRUE(req.ShouldKeepAlive()) << "HTTP/1.1 without Connection header should default to keep-alive";
 }
 
 TEST(HttpTest, Http11ExplicitClose) {
@@ -393,8 +391,7 @@ TEST(HttpTest, Http11ExplicitClose) {
     ASSERT_TRUE(complete);
 
     auto req = parser.GetRequest();
-    EXPECT_FALSE(req.ShouldKeepAlive())
-        << "HTTP/1.1 with Connection: close should close";
+    EXPECT_FALSE(req.ShouldKeepAlive()) << "HTTP/1.1 with Connection: close should close";
 }
 
 // ============================================================================
@@ -410,9 +407,7 @@ TEST(HttpTest, ServerRunReportsBindFailure) {
 
     // Bind to an invalid address to trigger failure
     HttpServer server(executor, "999.999.999.999", 0);
-    server.OnRequest([](const HttpRequest&) -> HttpResponse {
-        return HttpResponse::Ok("should not reach");
-    });
+    server.OnRequest([](const HttpRequest&) -> HttpResponse { return HttpResponse::Ok("should not reach"); });
 
     auto task = [&]() -> Task<void> {
         run_result = co_await server.Run();

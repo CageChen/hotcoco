@@ -16,12 +16,12 @@
 //
 // ============================================================================
 
-#include <iostream>
-
 #include "hotcoco/core/task.hpp"
 #include "hotcoco/io/libuv_executor.hpp"
 #include "hotcoco/io/tcp.hpp"
 #include "hotcoco/io/timer.hpp"
+
+#include <iostream>
 
 using namespace hotcoco;
 using namespace std::chrono_literals;
@@ -55,8 +55,7 @@ Task<void> HandleClient(std::unique_ptr<TcpStream> client, int id) {
     g_connection_count++;
 
     if (g_connection_count >= MAX_CONNECTIONS) {
-        std::cout << "\n[Server] Reached " << MAX_CONNECTIONS
-                  << " connections, stopping..." << std::endl;
+        std::cout << "\n[Server] Reached " << MAX_CONNECTIONS << " connections, stopping..." << std::endl;
         g_executor->Stop();
     }
 }

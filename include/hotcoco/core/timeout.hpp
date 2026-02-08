@@ -28,18 +28,18 @@
 
 #pragma once
 
+#include "hotcoco/core/detached_task.hpp"
+#include "hotcoco/core/result.hpp"
+#include "hotcoco/core/task.hpp"
+#include "hotcoco/core/when_all.hpp"
+#include "hotcoco/io/timer.hpp"
+#include "hotcoco/sync/event.hpp"
+
 #include <atomic>
 #include <chrono>
 #include <memory>
 #include <optional>
 #include <string>
-
-#include "hotcoco/core/result.hpp"
-#include "hotcoco/core/task.hpp"
-#include "hotcoco/core/detached_task.hpp"
-#include "hotcoco/core/when_all.hpp"
-#include "hotcoco/io/timer.hpp"
-#include "hotcoco/sync/event.hpp"
 
 namespace hotcoco {
 
@@ -47,10 +47,7 @@ namespace hotcoco {
 struct TimeoutError {
     std::chrono::milliseconds duration;
 
-    std::string Message() const {
-        return "Operation timed out after " +
-               std::to_string(duration.count()) + "ms";
-    }
+    std::string Message() const { return "Operation timed out after " + std::to_string(duration.count()) + "ms"; }
 };
 
 namespace detail {
@@ -81,48 +78,39 @@ template <typename T>
 Task<void> TimeoutUserChild(std::shared_ptr<TimeoutState<T>> state, Task<T> user_task) {
     T value = co_await std::move(user_task);
     bool expected = false;
-    if (state->first_completed.compare_exchange_strong(
-            expected, true, std::memory_order_acq_rel,
-            std::memory_order_relaxed)) {
+    if (state->first_completed.compare_exchange_strong(expected, true, std::memory_order_acq_rel,
+                                                       std::memory_order_relaxed)) {
         state->user_result.emplace(std::move(value));
         state->notify.Set();
     }
 }
 
 template <typename T, typename Rep, typename Period>
-Task<void> TimeoutTimerChild(
-    std::shared_ptr<TimeoutState<T>> state,
-    std::chrono::duration<Rep, Period> timeout) {
+Task<void> TimeoutTimerChild(std::shared_ptr<TimeoutState<T>> state, std::chrono::duration<Rep, Period> timeout) {
     co_await AsyncSleep(timeout);
     bool expected = false;
-    if (state->first_completed.compare_exchange_strong(
-            expected, true, std::memory_order_acq_rel,
-            std::memory_order_relaxed)) {
+    if (state->first_completed.compare_exchange_strong(expected, true, std::memory_order_acq_rel,
+                                                       std::memory_order_relaxed)) {
         state->timed_out = true;
         state->notify.Set();
     }
 }
 
-inline Task<void> TimeoutUserChildVoid(
-    std::shared_ptr<TimeoutStateVoid> state, Task<void> user_task) {
+inline Task<void> TimeoutUserChildVoid(std::shared_ptr<TimeoutStateVoid> state, Task<void> user_task) {
     co_await std::move(user_task);
     bool expected = false;
-    if (state->first_completed.compare_exchange_strong(
-            expected, true, std::memory_order_acq_rel,
-            std::memory_order_relaxed)) {
+    if (state->first_completed.compare_exchange_strong(expected, true, std::memory_order_acq_rel,
+                                                       std::memory_order_relaxed)) {
         state->notify.Set();
     }
 }
 
 template <typename Rep, typename Period>
-Task<void> TimeoutTimerChildVoid(
-    std::shared_ptr<TimeoutStateVoid> state,
-    std::chrono::duration<Rep, Period> timeout) {
+Task<void> TimeoutTimerChildVoid(std::shared_ptr<TimeoutStateVoid> state, std::chrono::duration<Rep, Period> timeout) {
     co_await AsyncSleep(timeout);
     bool expected = false;
-    if (state->first_completed.compare_exchange_strong(
-            expected, true, std::memory_order_acq_rel,
-            std::memory_order_relaxed)) {
+    if (state->first_completed.compare_exchange_strong(expected, true, std::memory_order_acq_rel,
+                                                       std::memory_order_relaxed)) {
         state->timed_out = true;
         state->notify.Set();
     }
@@ -131,10 +119,8 @@ Task<void> TimeoutTimerChildVoid(
 // Controller coroutine: owns all children, waits for ALL to complete,
 // then self-destructs via DetachedTask.
 template <typename T, typename Rep, typename Period>
-Task<void> TimeoutController(
-    std::shared_ptr<TimeoutState<T>> state,
-    Task<T> user_task,
-    std::chrono::duration<Rep, Period> timeout) {
+Task<void> TimeoutController(std::shared_ptr<TimeoutState<T>> state, Task<T> user_task,
+                             std::chrono::duration<Rep, Period> timeout) {
     std::vector<Task<void>> children;
     children.push_back(TimeoutUserChild<T>(state, std::move(user_task)));
     children.push_back(TimeoutTimerChild<T>(state, timeout));
@@ -142,10 +128,8 @@ Task<void> TimeoutController(
 }
 
 template <typename Rep, typename Period>
-Task<void> TimeoutControllerVoid(
-    std::shared_ptr<TimeoutStateVoid> state,
-    Task<void> user_task,
-    std::chrono::duration<Rep, Period> timeout) {
+Task<void> TimeoutControllerVoid(std::shared_ptr<TimeoutStateVoid> state, Task<void> user_task,
+                                 std::chrono::duration<Rep, Period> timeout) {
     std::vector<Task<void>> children;
     children.push_back(TimeoutUserChildVoid(state, std::move(user_task)));
     children.push_back(TimeoutTimerChildVoid(state, timeout));
@@ -158,14 +142,10 @@ Task<void> TimeoutControllerVoid(
 // WithTimeout for Task<T> - returns Result<T, TimeoutError>
 // ============================================================================
 template <typename T, typename Rep, typename Period>
-Task<Result<T, TimeoutError>> WithTimeout(
-    Task<T> task,
-    std::chrono::duration<Rep, Period> timeout) {
-
+Task<Result<T, TimeoutError>> WithTimeout(Task<T> task, std::chrono::duration<Rep, Period> timeout) {
     auto state = std::make_shared<detail::TimeoutState<T>>();
 
-    auto controller = MakeDetached(
-        detail::TimeoutController<T>(state, std::move(task), timeout));
+    auto controller = MakeDetached(detail::TimeoutController<T>(state, std::move(task), timeout));
     controller.Start();
 
     co_await state->notify.Wait();
@@ -179,14 +159,10 @@ Task<Result<T, TimeoutError>> WithTimeout(
 
 // Specialization for Task<void>
 template <typename Rep, typename Period>
-Task<Result<void, TimeoutError>> WithTimeout(
-    Task<void> task,
-    std::chrono::duration<Rep, Period> timeout) {
-
+Task<Result<void, TimeoutError>> WithTimeout(Task<void> task, std::chrono::duration<Rep, Period> timeout) {
     auto state = std::make_shared<detail::TimeoutStateVoid>();
 
-    auto controller = MakeDetached(
-        detail::TimeoutControllerVoid(state, std::move(task), timeout));
+    auto controller = MakeDetached(detail::TimeoutControllerVoid(state, std::move(task), timeout));
     controller.Start();
 
     co_await state->notify.Wait();

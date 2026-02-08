@@ -2,20 +2,18 @@
 // Combinator Tests
 // ============================================================================
 
-#include <gtest/gtest.h>
-
-#include <string>
-
-#include <atomic>
-
 #include "hotcoco/core/combinators.hpp"
+#include "hotcoco/core/error.hpp"
+#include "hotcoco/core/result.hpp"
 #include "hotcoco/core/task.hpp"
 #include "hotcoco/core/timeout.hpp"
 #include "hotcoco/core/when_all.hpp"
 #include "hotcoco/core/when_any.hpp"
-#include "hotcoco/core/error.hpp"
-#include "hotcoco/core/result.hpp"
 #include "hotcoco/sync/sync_wait.hpp"
+
+#include <atomic>
+#include <gtest/gtest.h>
+#include <string>
 
 using namespace hotcoco;
 
@@ -36,60 +34,56 @@ Task<void> SetValue(int& target, int value) {
     co_return;
 }
 
-// Test Then with SyncWait  
+// Test Then with SyncWait
 TEST(CombinatorTest, ThenBasic) {
     auto task = Then(MakeInt(21), [](int x) { return x * 2; });
-    
+
     int result = SyncWait(std::move(task));
     EXPECT_EQ(result, 42);
 }
 
 TEST(CombinatorTest, ThenToString) {
     auto task = Then(MakeInt(123), [](int x) { return std::to_string(x); });
-    
+
     std::string result = SyncWait(std::move(task));
     EXPECT_EQ(result, "123");
 }
 
 TEST(CombinatorTest, ThenChained) {
     // Chain multiple transformations
-    auto step1 = Then(MakeInt(5), [](int x) { return x * 2; });      // 10
+    auto step1 = Then(MakeInt(5), [](int x) { return x * 2; });        // 10
     auto step2 = Then(std::move(step1), [](int x) { return x + 3; });  // 13
     auto step3 = Then(std::move(step2), [](int x) { return x * x; });  // 169
-    
+
     int result = SyncWait(std::move(step3));
     EXPECT_EQ(result, 169);
 }
 
 TEST(CombinatorTest, ThenWithVoidInput) {
     int value = 0;
-    
+
     auto void_task = SetValue(value, 10);
     auto task = Then(std::move(void_task), [&]() { return value * 2; });
-    
+
     int result = SyncWait(std::move(task));
     EXPECT_EQ(result, 20);
 }
 
 TEST(CombinatorTest, ThenVoidToVoid) {
     int counter = 0;
-    
+
     auto void_task = SetValue(counter, 1);
     auto task = Then(std::move(void_task), [&]() { counter += 10; });
-    
+
     SyncWait(std::move(task));
     EXPECT_EQ(counter, 11);
 }
 
 TEST(CombinatorTest, ComplexChain) {
-    auto task = Then(MakeString("hotcoco"), [](std::string s) {
-        return s + " is awesome!";
-    });
-    
-    auto final_task = Then(std::move(task), [](std::string s) {
-        return s.length();
-    });
-    
+    auto task = Then(MakeString("hotcoco"), [](std::string s) { return s + " is awesome!"; });
+
+    auto final_task = Then(std::move(task), [](std::string s) { return s.length(); });
+
     size_t result = SyncWait(std::move(final_task));
     // "hotcoco is awesome!" = 19 characters
     EXPECT_EQ(result, 19u);

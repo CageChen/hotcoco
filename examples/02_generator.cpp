@@ -9,9 +9,9 @@
 //
 // ============================================================================
 
-#include <iostream>
-
 #include "hotcoco/hotcoco.hpp"
+
+#include <iostream>
 
 using namespace hotcoco;
 
@@ -39,7 +39,7 @@ Generator<long long> Fibonacci() {
 // Generate squares of numbers
 Generator<int> Squares(int n) {
     for (int i = 1; i <= n; ++i) {
-        co_yield i * i;
+        co_yield i* i;
     }
 }
 

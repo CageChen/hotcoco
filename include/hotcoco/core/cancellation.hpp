@@ -16,9 +16,9 @@
 // ------
 //   CancellationSource source;
 //   auto token = source.GetToken();
-//   
+//
 //   auto task = LongRunningWork(token);
-//   
+//
 //   // Cancel after timeout
 //   std::thread([&source] {
 //       std::this_thread::sleep_for(5s);
@@ -53,34 +53,32 @@ class CancellationSource;
 // CancellationState - Shared state between source and tokens
 // ============================================================================
 class CancellationState {
-public:
+   public:
     CancellationState() = default;
-    
+
     // Non-copyable, non-movable
     CancellationState(const CancellationState&) = delete;
     CancellationState& operator=(const CancellationState&) = delete;
-    
-    bool IsCancelled() const noexcept {
-        return cancelled_.load(std::memory_order_acquire);
-    }
-    
+
+    bool IsCancelled() const noexcept { return cancelled_.load(std::memory_order_acquire); }
+
     void Cancel() {
         if (cancelled_.exchange(true, std::memory_order_acq_rel)) {
             return;  // Already cancelled
         }
-        
+
         // Invoke callbacks
         std::vector<std::function<void()>> callbacks_to_call;
         {
             std::lock_guard<std::mutex> lock(mutex_);
             callbacks_to_call = std::move(callbacks_);
         }
-        
+
         for (auto& callback : callbacks_to_call) {
             callback();
         }
     }
-    
+
     // Register a callback to be called when cancelled
     // Returns a handle that can be used to unregister
     size_t RegisterCallback(std::function<void()> callback) {
@@ -101,10 +99,10 @@ public:
         callback();
         return 0;
     }
-    
+
     void UnregisterCallback(size_t handle) {
         if (handle == 0) return;
-        
+
         std::lock_guard<std::mutex> lock(mutex_);
         for (size_t i = 0; i < callback_handles_.size(); ++i) {
             if (callback_handles_[i] == handle) {
@@ -114,8 +112,8 @@ public:
             }
         }
     }
-    
-private:
+
+   private:
     std::atomic<bool> cancelled_{false};
     std::mutex mutex_;
     std::vector<std::function<void()>> callbacks_;
@@ -127,20 +125,16 @@ private:
 // CancellationToken - Read-only view of cancellation state
 // ============================================================================
 class CancellationToken {
-public:
+   public:
     // Default token that is never cancelled
     CancellationToken() : state_(nullptr) {}
-    
+
     // Check if cancellation has been requested
-    bool IsCancelled() const noexcept {
-        return state_ && state_->IsCancelled();
-    }
-    
+    bool IsCancelled() const noexcept { return state_ && state_->IsCancelled(); }
+
     // Implicit bool conversion
-    explicit operator bool() const noexcept {
-        return !IsCancelled();
-    }
-    
+    explicit operator bool() const noexcept { return !IsCancelled(); }
+
     // Register callback for cancellation notification
     size_t OnCancel(std::function<void()> callback) {
         if (state_) {
@@ -148,30 +142,25 @@ public:
         }
         return 0;
     }
-    
+
     // Unregister a previously registered callback
     void Unregister(size_t handle) {
         if (state_) {
             state_->UnregisterCallback(handle);
         }
     }
-    
+
     // Check if this is a valid token (has associated state)
-    bool IsValid() const noexcept {
-        return state_ != nullptr;
-    }
-    
+    bool IsValid() const noexcept { return state_ != nullptr; }
+
     // Create a "never cancelled" token
-    static CancellationToken None() {
-        return CancellationToken{};
-    }
-    
-private:
+    static CancellationToken None() { return CancellationToken{}; }
+
+   private:
     friend class CancellationSource;
-    
-    explicit CancellationToken(std::shared_ptr<CancellationState> state)
-        : state_(std::move(state)) {}
-    
+
+    explicit CancellationToken(std::shared_ptr<CancellationState> state) : state_(std::move(state)) {}
+
     std::shared_ptr<CancellationState> state_;
 };
 
@@ -179,33 +168,29 @@ private:
 // CancellationSource - Creates and controls tokens
 // ============================================================================
 class CancellationSource {
-public:
+   public:
     CancellationSource() : state_(std::make_shared<CancellationState>()) {}
-    
+
     // Non-copyable but movable
     CancellationSource(const CancellationSource&) = delete;
     CancellationSource& operator=(const CancellationSource&) = delete;
     CancellationSource(CancellationSource&&) = default;
     CancellationSource& operator=(CancellationSource&&) = default;
-    
+
     // Get a token that can be passed to coroutines
-    CancellationToken GetToken() const {
-        return CancellationToken(state_);
-    }
-    
+    CancellationToken GetToken() const { return CancellationToken(state_); }
+
     // Request cancellation
     void Cancel() {
         if (state_) {
             state_->Cancel();
         }
     }
-    
+
     // Check if cancellation was requested
-    bool IsCancelled() const noexcept {
-        return state_ && state_->IsCancelled();
-    }
-    
-private:
+    bool IsCancelled() const noexcept { return state_ && state_->IsCancelled(); }
+
+   private:
     std::shared_ptr<CancellationState> state_;
 };
 
@@ -213,19 +198,17 @@ private:
 // RAII guard for callback registration
 // ============================================================================
 class CancellationCallbackGuard {
-public:
+   public:
     CancellationCallbackGuard(CancellationToken token, std::function<void()> callback)
         : token_(std::move(token)), handle_(token_.OnCancel(std::move(callback))) {}
-    
-    ~CancellationCallbackGuard() {
-        token_.Unregister(handle_);
-    }
-    
+
+    ~CancellationCallbackGuard() { token_.Unregister(handle_); }
+
     // Non-copyable, non-movable
     CancellationCallbackGuard(const CancellationCallbackGuard&) = delete;
     CancellationCallbackGuard& operator=(const CancellationCallbackGuard&) = delete;
-    
-private:
+
+   private:
     CancellationToken token_;
     size_t handle_;
 };

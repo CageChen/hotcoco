@@ -51,9 +51,7 @@ struct CpuAffinity {
     }
 
     // Bind to specific cores
-    static CpuAffinity Cores(std::vector<int> cores) {
-        return CpuAffinity{std::move(cores)};
-    }
+    static CpuAffinity Cores(std::vector<int> cores) { return CpuAffinity{std::move(cores)}; }
 
     // Check if affinity is set
     bool IsSet() const { return !cpus.empty(); }

@@ -2,15 +2,15 @@
 // Cancellation Tests
 // ============================================================================
 
-#include <gtest/gtest.h>
+#include "hotcoco/core/cancellation.hpp"
+
+#include "hotcoco/core/task.hpp"
+#include "hotcoco/sync/sync_wait.hpp"
 
 #include <atomic>
 #include <chrono>
+#include <gtest/gtest.h>
 #include <thread>
-
-#include "hotcoco/core/cancellation.hpp"
-#include "hotcoco/core/task.hpp"
-#include "hotcoco/sync/sync_wait.hpp"
 
 using namespace hotcoco;
 using namespace std::chrono_literals;
@@ -28,7 +28,7 @@ TEST(CancellationTest, DefaultTokenNotCancelled) {
 TEST(CancellationTest, SourceCreatesValidToken) {
     CancellationSource source;
     auto token = source.GetToken();
-    
+
     EXPECT_TRUE(token.IsValid());
     EXPECT_FALSE(token.IsCancelled());
 }
@@ -36,11 +36,11 @@ TEST(CancellationTest, SourceCreatesValidToken) {
 TEST(CancellationTest, CancelPropagates) {
     CancellationSource source;
     auto token = source.GetToken();
-    
+
     EXPECT_FALSE(token.IsCancelled());
-    
+
     source.Cancel();
-    
+
     EXPECT_TRUE(token.IsCancelled());
     EXPECT_TRUE(source.IsCancelled());
 }
@@ -49,12 +49,12 @@ TEST(CancellationTest, MultipleTokens) {
     CancellationSource source;
     auto token1 = source.GetToken();
     auto token2 = source.GetToken();
-    
+
     EXPECT_FALSE(token1.IsCancelled());
     EXPECT_FALSE(token2.IsCancelled());
-    
+
     source.Cancel();
-    
+
     EXPECT_TRUE(token1.IsCancelled());
     EXPECT_TRUE(token2.IsCancelled());
 }
@@ -62,12 +62,12 @@ TEST(CancellationTest, MultipleTokens) {
 TEST(CancellationTest, BoolConversion) {
     CancellationSource source;
     auto token = source.GetToken();
-    
+
     // Token is valid (not cancelled), so bool is true
     EXPECT_TRUE(static_cast<bool>(token));
-    
+
     source.Cancel();
-    
+
     // Now cancelled, so bool is false
     EXPECT_FALSE(static_cast<bool>(token));
 }
@@ -79,26 +79,26 @@ TEST(CancellationTest, BoolConversion) {
 TEST(CancellationTest, CallbackOnCancel) {
     CancellationSource source;
     auto token = source.GetToken();
-    
+
     std::atomic<bool> called{false};
     token.OnCancel([&called] { called = true; });
-    
+
     EXPECT_FALSE(called.load());
-    
+
     source.Cancel();
-    
+
     EXPECT_TRUE(called.load());
 }
 
 TEST(CancellationTest, CallbackIfAlreadyCancelled) {
     CancellationSource source;
     source.Cancel();
-    
+
     auto token = source.GetToken();
-    
+
     std::atomic<bool> called{false};
     token.OnCancel([&called] { called = true; });
-    
+
     // Callback should be called immediately
     EXPECT_TRUE(called.load());
 }
@@ -106,44 +106,44 @@ TEST(CancellationTest, CallbackIfAlreadyCancelled) {
 TEST(CancellationTest, MultipleCallbacks) {
     CancellationSource source;
     auto token = source.GetToken();
-    
+
     std::atomic<int> count{0};
     token.OnCancel([&count] { count++; });
     token.OnCancel([&count] { count++; });
     token.OnCancel([&count] { count++; });
-    
+
     source.Cancel();
-    
+
     EXPECT_EQ(count.load(), 3);
 }
 
 TEST(CancellationTest, UnregisterCallback) {
     CancellationSource source;
     auto token = source.GetToken();
-    
+
     std::atomic<bool> called{false};
     size_t handle = token.OnCancel([&called] { called = true; });
-    
+
     token.Unregister(handle);
-    
+
     source.Cancel();
-    
+
     EXPECT_FALSE(called.load());
 }
 
 TEST(CancellationTest, CallbackGuard) {
     CancellationSource source;
     auto token = source.GetToken();
-    
+
     std::atomic<bool> called{false};
-    
+
     {
         CancellationCallbackGuard guard(token, [&called] { called = true; });
         // Guard goes out of scope, unregisters callback
     }
-    
+
     source.Cancel();
-    
+
     EXPECT_FALSE(called.load());
 }
 
@@ -154,21 +154,21 @@ TEST(CancellationTest, CallbackGuard) {
 TEST(CancellationTest, CancelFromAnotherThread) {
     CancellationSource source;
     auto token = source.GetToken();
-    
+
     std::atomic<bool> saw_cancel{false};
-    
+
     std::thread worker([&token, &saw_cancel] {
         while (!token.IsCancelled()) {
             std::this_thread::sleep_for(1ms);
         }
         saw_cancel = true;
     });
-    
+
     std::this_thread::sleep_for(10ms);
     source.Cancel();
-    
+
     worker.join();
-    
+
     EXPECT_TRUE(saw_cancel.load());
 }
 
@@ -188,19 +188,19 @@ Task<int> CountUntilCancelled(CancellationToken token) {
 TEST(CancellationTest, WithCoroutine) {
     CancellationSource source;
     auto token = source.GetToken();
-    
+
     // Pre-cancel
     source.Cancel();
-    
+
     auto result = SyncWait(CountUntilCancelled(token));
-    
+
     // Should exit immediately with count 0
     EXPECT_EQ(result, 0);
 }
 
 TEST(CancellationTest, NoneToken) {
     auto token = CancellationToken::None();
-    
+
     EXPECT_FALSE(token.IsValid());
     EXPECT_FALSE(token.IsCancelled());
 
@@ -266,9 +266,7 @@ TEST(CancellationTest, RegisterCallbackOnCancelledTokenNoDeadlock) {
         call_count++;
         // This second registration also triggers immediate invocation
         // because the token is already cancelled.
-        token.OnCancel([&] {
-            call_count++;
-        });
+        token.OnCancel([&] { call_count++; });
     });
 
     EXPECT_EQ(call_count.load(), 2);

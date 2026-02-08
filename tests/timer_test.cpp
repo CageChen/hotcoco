@@ -2,14 +2,14 @@
 // AsyncSleep / Timer Tests
 // ============================================================================
 
-#include <gtest/gtest.h>
-
-#include <chrono>
+#include "hotcoco/io/timer.hpp"
 
 #include "hotcoco/core/task.hpp"
 #include "hotcoco/io/libuv_executor.hpp"
-#include "hotcoco/io/timer.hpp"
 #include "hotcoco/sync/sync_wait.hpp"
+
+#include <chrono>
+#include <gtest/gtest.h>
 
 using namespace hotcoco;
 using namespace std::chrono_literals;

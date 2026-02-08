@@ -80,8 +80,7 @@ inline void SymmetricTransfer(std::coroutine_handle<> target) noexcept {
 
 using SymmetricTransferResult = std::coroutine_handle<>;
 
-inline std::coroutine_handle<> SymmetricTransfer(
-    std::coroutine_handle<> target) noexcept {
+inline std::coroutine_handle<> SymmetricTransfer(std::coroutine_handle<> target) noexcept {
     return target;
 }
 

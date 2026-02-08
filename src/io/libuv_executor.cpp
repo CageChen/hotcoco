@@ -111,8 +111,7 @@ void LibuvExecutor::Schedule(std::coroutine_handle<> handle) {
     uv_async_send(&async_);
 }
 
-void LibuvExecutor::ScheduleAfter(std::chrono::milliseconds delay,
-                                   std::coroutine_handle<> handle) {
+void LibuvExecutor::ScheduleAfter(std::chrono::milliseconds delay, std::coroutine_handle<> handle) {
     // Queue the timer request for processing on the event loop thread.
     // uv_timer_init/uv_timer_start are NOT thread-safe, so we must
     // create timers only from the loop thread.
@@ -168,8 +167,7 @@ void LibuvExecutor::OnIdle(uv_idle_t* handle) {
 
     // Check if all queues are empty
     std::lock_guard<std::mutex> lock(self->queue_mutex_);
-    if (self->ready_queue_.empty() && self->callback_queue_.empty() &&
-        self->timer_queue_.empty()) {
+    if (self->ready_queue_.empty() && self->callback_queue_.empty() && self->timer_queue_.empty()) {
         uv_idle_stop(handle);
         self->idle_active_ = false;
     }

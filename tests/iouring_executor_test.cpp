@@ -8,15 +8,15 @@
 
 #ifdef HOTCOCO_HAS_IOURING
 
-#include <gtest/gtest.h>
+#include "hotcoco/io/iouring_executor.hpp"
+
+#include "hotcoco/core/task.hpp"
+#include "hotcoco/io/timer.hpp"
 
 #include <atomic>
 #include <chrono>
+#include <gtest/gtest.h>
 #include <thread>
-
-#include "hotcoco/core/task.hpp"
-#include "hotcoco/io/iouring_executor.hpp"
-#include "hotcoco/io/timer.hpp"
 
 using namespace hotcoco;
 using namespace std::chrono_literals;

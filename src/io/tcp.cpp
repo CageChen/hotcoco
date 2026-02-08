@@ -4,13 +4,12 @@
 
 #include "hotcoco/io/tcp.hpp"
 
-#include <arpa/inet.h>
-#include <netdb.h>
+#include "hotcoco/io/libuv_executor.hpp"
 
+#include <arpa/inet.h>
 #include <cassert>
 #include <cstring>
-
-#include "hotcoco/io/libuv_executor.hpp"
+#include <netdb.h>
 
 namespace hotcoco {
 
@@ -30,9 +29,7 @@ TcpListener::~TcpListener() {
         // server_ is heap-allocated, so uv_close's callback can safely
         // free it even after this TcpListener object is destroyed.
         uv_close(reinterpret_cast<uv_handle_t*>(server_),
-                 [](uv_handle_t* h) {
-                     delete reinterpret_cast<uv_tcp_t*>(h);
-                 });
+                 [](uv_handle_t* h) { delete reinterpret_cast<uv_tcp_t*>(h); });
     }
 }
 
@@ -125,9 +122,7 @@ TcpStream::~TcpStream() {
             // socket_ is heap-allocated, so uv_close's callback can safely
             // free it even after this TcpStream object is destroyed.
             uv_close(reinterpret_cast<uv_handle_t*>(socket_),
-                     [](uv_handle_t* h) {
-                         delete reinterpret_cast<uv_tcp_t*>(h);
-                     });
+                     [](uv_handle_t* h) { delete reinterpret_cast<uv_tcp_t*>(h); });
         } else {
             // Never initialized via uv_tcp_init — just free the memory.
             delete socket_;
@@ -197,10 +192,8 @@ bool TcpStream::ConnectAwaitable::await_suspend(std::coroutine_handle<> handle) 
     }
 
     stream_.connect_req_.data = &stream_;
-    result = uv_tcp_connect(&stream_.connect_req_,
-                            stream_.socket_,
-                            reinterpret_cast<const sockaddr*>(&addr),
-                            OnConnect);
+    result =
+        uv_tcp_connect(&stream_.connect_req_, stream_.socket_, reinterpret_cast<const sockaddr*>(&addr), OnConnect);
     if (result != 0) {
         sync_error_ = result;
         return false;  // Don't suspend, resume immediately
@@ -231,9 +224,7 @@ void TcpStream::ReadAwaitable::await_suspend(std::coroutine_handle<> handle) {
     stream_.read_waiter_ = handle;
     stream_.reading_ = true;
 
-    uv_read_start(reinterpret_cast<uv_stream_t*>(stream_.socket_),
-                  AllocBuffer,
-                  OnRead);
+    uv_read_start(reinterpret_cast<uv_stream_t*>(stream_.socket_), AllocBuffer, OnRead);
 }
 
 std::vector<char> TcpStream::ReadAwaitable::await_resume() {
@@ -308,13 +299,9 @@ bool TcpStream::WriteAwaitable::await_suspend(std::coroutine_handle<> handle) {
     write_req->data = std::string(data_);
     write_req->req.data = write_req;
 
-    uv_buf_t buf = uv_buf_init(write_req->data.data(),
-                               static_cast<unsigned int>(write_req->data.size()));
+    uv_buf_t buf = uv_buf_init(write_req->data.data(), static_cast<unsigned int>(write_req->data.size()));
 
-    int result = uv_write(&write_req->req,
-                          reinterpret_cast<uv_stream_t*>(stream_.socket_),
-                          &buf, 1,
-                          OnWrite);
+    int result = uv_write(&write_req->req, reinterpret_cast<uv_stream_t*>(stream_.socket_), &buf, 1, OnWrite);
 
     if (result != 0) {
         bytes_written_ = result;

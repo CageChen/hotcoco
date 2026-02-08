@@ -29,18 +29,18 @@
 
 #pragma once
 
-#include <atomic>
-#include <coroutine>
-#include <memory>
-#include <optional>
-#include <vector>
-
 #include "hotcoco/core/detached_task.hpp"
 #include "hotcoco/core/error.hpp"
 #include "hotcoco/core/result.hpp"
 #include "hotcoco/core/task.hpp"
 #include "hotcoco/core/when_all.hpp"
 #include "hotcoco/sync/event.hpp"
+
+#include <atomic>
+#include <coroutine>
+#include <memory>
+#include <optional>
+#include <vector>
 
 namespace hotcoco {
 
@@ -77,16 +77,12 @@ namespace detail {
 // Helper: make a child task that races via atomic CAS
 // ============================================================================
 template <typename T>
-Task<void> MakeWhenAnyChild(
-    Task<T> user_task,
-    size_t index,
-    std::shared_ptr<WhenAnySharedState<T>> state) {
+Task<void> MakeWhenAnyChild(Task<T> user_task, size_t index, std::shared_ptr<WhenAnySharedState<T>> state) {
     T value = co_await std::move(user_task);
 
     bool expected = false;
-    if (state->first_completed.compare_exchange_strong(
-            expected, true, std::memory_order_acq_rel,
-            std::memory_order_relaxed)) {
+    if (state->first_completed.compare_exchange_strong(expected, true, std::memory_order_acq_rel,
+                                                       std::memory_order_relaxed)) {
         // We won the race — store result and notify
         state->result.emplace(WhenAnyResult<T>{index, std::move(value)});
         state->notify.Set();
@@ -94,16 +90,13 @@ Task<void> MakeWhenAnyChild(
 }
 
 // Void specialization
-inline Task<void> MakeWhenAnyChildVoid(
-    Task<void> user_task,
-    size_t index,
-    std::shared_ptr<WhenAnySharedState<void>> state) {
+inline Task<void> MakeWhenAnyChildVoid(Task<void> user_task, size_t index,
+                                       std::shared_ptr<WhenAnySharedState<void>> state) {
     co_await std::move(user_task);
 
     bool expected = false;
-    if (state->first_completed.compare_exchange_strong(
-            expected, true, std::memory_order_acq_rel,
-            std::memory_order_relaxed)) {
+    if (state->first_completed.compare_exchange_strong(expected, true, std::memory_order_acq_rel,
+                                                       std::memory_order_relaxed)) {
         state->result.emplace(WhenAnyResult<void>{index});
         state->notify.Set();
     }
@@ -113,18 +106,14 @@ inline Task<void> MakeWhenAnyChildVoid(
 // Controller: DetachedTask that owns all children and waits for ALL
 // ============================================================================
 template <typename T>
-DetachedTask MakeWhenAnyController(
-    std::vector<Task<T>> user_tasks,
-    std::shared_ptr<WhenAnySharedState<T>> state) {
+DetachedTask MakeWhenAnyController(std::vector<Task<T>> user_tasks, std::shared_ptr<WhenAnySharedState<T>> state) {
     std::vector<Task<void>> children;
     children.reserve(user_tasks.size());
     for (size_t i = 0; i < user_tasks.size(); ++i) {
         if constexpr (std::is_void_v<T>) {
-            children.push_back(
-                MakeWhenAnyChildVoid(std::move(user_tasks[i]), i, state));
+            children.push_back(MakeWhenAnyChildVoid(std::move(user_tasks[i]), i, state));
         } else {
-            children.push_back(
-                MakeWhenAnyChild(std::move(user_tasks[i]), i, state));
+            children.push_back(MakeWhenAnyChild(std::move(user_tasks[i]), i, state));
         }
     }
 
@@ -146,8 +135,7 @@ Task<Result<WhenAnyResult<T>, std::error_code>> WhenAny(std::vector<Task<T>> tas
 
     auto state = std::make_shared<WhenAnySharedState<T>>();
 
-    auto controller =
-        detail::MakeWhenAnyController<T>(std::move(tasks), state);
+    auto controller = detail::MakeWhenAnyController<T>(std::move(tasks), state);
     controller.Start();  // Start the controller (which starts all children)
 
     co_await state->notify.Wait();  // Suspend until the first child wins

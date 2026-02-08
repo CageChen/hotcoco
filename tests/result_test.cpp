@@ -2,13 +2,13 @@
 // Result Type Tests
 // ============================================================================
 
-#include <gtest/gtest.h>
-
-#include <string>
-
 #include "hotcoco/core/result.hpp"
+
 #include "hotcoco/core/task.hpp"
 #include "hotcoco/sync/sync_wait.hpp"
+
+#include <gtest/gtest.h>
+#include <string>
 
 using namespace hotcoco;
 
@@ -18,7 +18,7 @@ using namespace hotcoco;
 
 TEST(ResultTest, OkConstruction) {
     Result<int, std::string> result = Ok(42);
-    
+
     EXPECT_TRUE(result.IsOk());
     EXPECT_FALSE(result.IsErr());
     EXPECT_EQ(result.Value(), 42);
@@ -26,7 +26,7 @@ TEST(ResultTest, OkConstruction) {
 
 TEST(ResultTest, ErrConstruction) {
     Result<int, std::string> result = Err(std::string("error"));
-    
+
     EXPECT_FALSE(result.IsOk());
     EXPECT_TRUE(result.IsErr());
     EXPECT_EQ(result.Error(), "error");
@@ -35,10 +35,10 @@ TEST(ResultTest, ErrConstruction) {
 TEST(ResultTest, BoolConversion) {
     Result<int, std::string> ok = Ok(42);
     Result<int, std::string> err = Err(std::string("error"));
-    
+
     EXPECT_TRUE(static_cast<bool>(ok));
     EXPECT_FALSE(static_cast<bool>(err));
-    
+
     if (ok) {
         EXPECT_EQ(ok.Value(), 42);
     } else {
@@ -49,7 +49,7 @@ TEST(ResultTest, BoolConversion) {
 TEST(ResultTest, ValueOr) {
     Result<int, std::string> ok = Ok(42);
     Result<int, std::string> err = Err(std::string("error"));
-    
+
     EXPECT_EQ(ok.ValueOr(0), 42);
     EXPECT_EQ(err.ValueOr(0), 0);
 }
@@ -57,10 +57,10 @@ TEST(ResultTest, ValueOr) {
 TEST(ResultTest, ValueOrOptional) {
     Result<int, std::string> ok = Ok(42);
     Result<int, std::string> err = Err(std::string("error"));
-    
+
     auto opt_ok = ok.ValueOr();
     auto opt_err = err.ValueOr();
-    
+
     EXPECT_TRUE(opt_ok.has_value());
     EXPECT_EQ(*opt_ok, 42);
     EXPECT_FALSE(opt_err.has_value());
@@ -73,31 +73,31 @@ TEST(ResultTest, ValueOrOptional) {
 TEST(ResultTest, Map) {
     Result<int, std::string> ok = Ok(21);
     Result<int, std::string> err = Err(std::string("error"));
-    
+
     auto doubled_ok = ok.Map([](int x) { return x * 2; });
     auto doubled_err = err.Map([](int x) { return x * 2; });
-    
+
     EXPECT_TRUE(doubled_ok.IsOk());
     EXPECT_EQ(doubled_ok.Value(), 42);
-    
+
     EXPECT_TRUE(doubled_err.IsErr());
     EXPECT_EQ(doubled_err.Error(), "error");
 }
 
 TEST(ResultTest, MapToString) {
     Result<int, std::string> ok = Ok(42);
-    
+
     auto str_result = ok.Map([](int x) { return std::to_string(x); });
-    
+
     EXPECT_TRUE(str_result.IsOk());
     EXPECT_EQ(str_result.Value(), "42");
 }
 
 TEST(ResultTest, MapErr) {
     Result<int, int> err = Err(1);
-    
+
     auto mapped = err.MapErr([](int e) { return e * 10; });
-    
+
     EXPECT_TRUE(mapped.IsErr());
     EXPECT_EQ(mapped.Error(), 10);
 }
@@ -110,21 +110,21 @@ TEST(ResultTest, AndThen) {
             return Err(std::string("parse error"));
         }
     };
-    
+
     Result<std::string, std::string> ok = Ok(std::string("42"));
     Result<std::string, std::string> bad = Ok(std::string("not a number"));
     Result<std::string, std::string> err = Err(std::string("initial error"));
-    
+
     auto result1 = std::move(ok).AndThen(parse);
     auto result2 = std::move(bad).AndThen(parse);
     auto result3 = std::move(err).AndThen(parse);
-    
+
     EXPECT_TRUE(result1.IsOk());
     EXPECT_EQ(result1.Value(), 42);
-    
+
     EXPECT_TRUE(result2.IsErr());
     EXPECT_EQ(result2.Error(), "parse error");
-    
+
     EXPECT_TRUE(result3.IsErr());
     EXPECT_EQ(result3.Error(), "initial error");
 }
@@ -135,14 +135,14 @@ TEST(ResultTest, AndThen) {
 
 TEST(ResultTest, VoidOk) {
     Result<void, std::string> result = Ok();
-    
+
     EXPECT_TRUE(result.IsOk());
     EXPECT_FALSE(result.IsErr());
 }
 
 TEST(ResultTest, VoidErr) {
     Result<void, std::string> result = Err(std::string("error"));
-    
+
     EXPECT_FALSE(result.IsOk());
     EXPECT_TRUE(result.IsErr());
     EXPECT_EQ(result.Error(), "error");
@@ -164,12 +164,12 @@ TEST(ResultTest, WithCoroutines) {
         auto result1 = co_await Divide(10, 2);
         EXPECT_TRUE(result1.IsOk());
         EXPECT_EQ(result1.Value(), 5);
-        
+
         auto result2 = co_await Divide(10, 0);
         EXPECT_TRUE(result2.IsErr());
         EXPECT_EQ(result2.Error(), "division by zero");
     };
-    
+
     SyncWait(test());
 }
 
@@ -181,19 +181,19 @@ TEST(ResultTest, ChainedCoroutines) {
         }
         co_return Ok(result.Value() * 2);
     };
-    
+
     auto test = [&compute]() -> Task<void> {
         // Test successful computation
         auto result = co_await compute(5);
         EXPECT_TRUE(result.IsOk());
         EXPECT_EQ(result.Value(), 40);  // (100/5) * 2 = 40
-        
+
         // Test error propagation
         auto err_result = co_await compute(0);
         EXPECT_TRUE(err_result.IsErr());
         EXPECT_EQ(err_result.Error(), "division by zero");
     };
-    
+
     SyncWait(test());
 }
 
@@ -208,7 +208,7 @@ TEST(ResultTest, Equality) {
     Result<int, std::string> err1 = Err(std::string("a"));
     Result<int, std::string> err2 = Err(std::string("a"));
     Result<int, std::string> err3 = Err(std::string("b"));
-    
+
     EXPECT_EQ(ok1, ok2);
     EXPECT_NE(ok1, ok3);
     EXPECT_NE(ok1, err1);
@@ -231,18 +231,14 @@ TEST(ResultTest, MoveConstruction) {
 
 TEST(ResultTest, OrElse) {
     Result<int, int> err = Err(1);
-    auto recovered = std::move(err).OrElse([](int e) -> Result<int, int> {
-        return Ok(e * 100);
-    });
+    auto recovered = std::move(err).OrElse([](int e) -> Result<int, int> { return Ok(e * 100); });
     EXPECT_TRUE(recovered.IsOk());
     EXPECT_EQ(recovered.Value(), 100);
 }
 
 TEST(ResultTest, OrElseOkPassesThrough) {
     Result<int, int> ok = Ok(42);
-    auto same = std::move(ok).OrElse([](int) -> Result<int, int> {
-        return Ok(0);
-    });
+    auto same = std::move(ok).OrElse([](int) -> Result<int, int> { return Ok(0); });
     EXPECT_TRUE(same.IsOk());
     EXPECT_EQ(same.Value(), 42);
 }
@@ -256,9 +252,7 @@ TEST(ResultTest, MapErrOnOk) {
 
 TEST(ResultTest, MapWithRvalueRef) {
     Result<std::string, int> ok = Ok(std::string("hello"));
-    auto mapped = std::move(ok).Map([](std::string&& s) {
-        return s + " world";
-    });
+    auto mapped = std::move(ok).Map([](std::string&& s) { return s + " world"; });
     EXPECT_TRUE(mapped.IsOk());
     EXPECT_EQ(mapped.Value(), "hello world");
 }
@@ -283,9 +277,7 @@ TEST(ResultTest, AndThenChain) {
         return Ok(std::to_string(x));
     };
 
-    auto step2 = [](std::string s) -> Result<int, std::string> {
-        return Ok(static_cast<int>(s.size()));
-    };
+    auto step2 = [](std::string s) -> Result<int, std::string> { return Ok(static_cast<int>(s.size())); };
 
     Result<int, std::string> ok = Ok(12345);
     auto r = std::move(ok).AndThen(step1).AndThen(step2);

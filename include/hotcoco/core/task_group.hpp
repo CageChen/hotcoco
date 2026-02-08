@@ -19,23 +19,21 @@
 
 #pragma once
 
-#include <atomic>
-#include <cassert>
-#include <functional>
-#include <memory>
-
 #include "hotcoco/core/detached_task.hpp"
 #include "hotcoco/core/task.hpp"
 #include "hotcoco/io/executor.hpp"
 #include "hotcoco/sync/event.hpp"
 
+#include <atomic>
+#include <cassert>
+#include <functional>
+#include <memory>
+
 namespace hotcoco {
 
 class TaskGroup {
-public:
-    explicit TaskGroup(Executor& executor)
-        : executor_(executor)
-        , shared_(std::make_shared<SharedState>()) {
+   public:
+    explicit TaskGroup(Executor& executor) : executor_(executor), shared_(std::make_shared<SharedState>()) {
         // Start with event signaled so that co_await on an empty group
         // passes through immediately instead of hanging forever.
         shared_->event.Set();
@@ -77,22 +75,16 @@ public:
     // ========================================================================
     // Awaitable interface - co_await group waits for all tasks
     // ========================================================================
-    auto operator co_await() {
-        return shared_->event.Wait();
-    }
+    auto operator co_await() { return shared_->event.Wait(); }
 
     // ========================================================================
     // Query
     // ========================================================================
-    size_t Size() const {
-        return shared_->size.load(std::memory_order_acquire);
-    }
+    size_t Size() const { return shared_->size.load(std::memory_order_acquire); }
 
-    bool Empty() const {
-        return Size() == 0;
-    }
+    bool Empty() const { return Size() == 0; }
 
-private:
+   private:
     struct SharedState {
         std::atomic<uint64_t> size{0};
         AsyncEvent event;

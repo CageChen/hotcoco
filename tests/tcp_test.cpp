@@ -2,15 +2,15 @@
 // TCP Unit Tests
 // ============================================================================
 
-#include <gtest/gtest.h>
-
-#include <chrono>
-#include <thread>
+#include "hotcoco/io/tcp.hpp"
 
 #include "hotcoco/core/task.hpp"
 #include "hotcoco/io/libuv_executor.hpp"
-#include "hotcoco/io/tcp.hpp"
 #include "hotcoco/io/timer.hpp"
+
+#include <chrono>
+#include <gtest/gtest.h>
+#include <thread>
 
 using namespace hotcoco;
 using namespace std::chrono_literals;
@@ -276,8 +276,7 @@ TEST(TcpTest, ConnectFailureReportsError) {
     executor.Run();
 
     // Must report a non-zero error code (ECONNREFUSED or similar)
-    EXPECT_NE(connect_result, 0)
-        << "Async connect failure must be reported via await_resume";
+    EXPECT_NE(connect_result, 0) << "Async connect failure must be reported via await_resume";
 }
 
 // ============================================================================

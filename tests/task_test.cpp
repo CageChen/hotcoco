@@ -2,9 +2,9 @@
 // Task Unit Tests
 // ============================================================================
 
-#include <gtest/gtest.h>
-
 #include "hotcoco/hotcoco.hpp"
+
+#include <gtest/gtest.h>
 
 using namespace hotcoco;
 
@@ -14,9 +14,7 @@ using namespace hotcoco;
 
 TEST(TaskTest, SimpleReturnValue) {
     // A simple coroutine that returns a value
-    auto task = []() -> Task<int> {
-        co_return 42;
-    };
+    auto task = []() -> Task<int> { co_return 42; };
 
     int result = SyncWait(task());
     EXPECT_EQ(result, 42);
@@ -35,9 +33,7 @@ TEST(TaskTest, VoidTask) {
 }
 
 TEST(TaskTest, StringReturnValue) {
-    auto task = []() -> Task<std::string> {
-        co_return "hello hotcoco";
-    };
+    auto task = []() -> Task<std::string> { co_return "hello hotcoco"; };
 
     std::string result = SyncWait(task());
     EXPECT_EQ(result, "hello hotcoco");
@@ -49,9 +45,7 @@ TEST(TaskTest, StringReturnValue) {
 
 TEST(TaskTest, ChainedCoroutines) {
     // Inner coroutine
-    auto inner = []() -> Task<int> {
-        co_return 21;
-    };
+    auto inner = []() -> Task<int> { co_return 21; };
 
     // Outer coroutine that awaits inner
     auto outer = [&]() -> Task<int> {
@@ -64,9 +58,7 @@ TEST(TaskTest, ChainedCoroutines) {
 }
 
 TEST(TaskTest, MultipleChainedCoroutines) {
-    auto first = []() -> Task<int> {
-        co_return 10;
-    };
+    auto first = []() -> Task<int> { co_return 10; };
 
     auto second = [&]() -> Task<int> {
         int a = co_await first();
@@ -87,9 +79,7 @@ TEST(TaskTest, MultipleChainedCoroutines) {
 // ============================================================================
 
 TEST(TaskTest, MoveOnlyResult) {
-    auto task = []() -> Task<std::unique_ptr<int>> {
-        co_return std::make_unique<int>(42);
-    };
+    auto task = []() -> Task<std::unique_ptr<int>> { co_return std::make_unique<int>(42); };
 
     auto result = SyncWait(task());
     ASSERT_NE(result, nullptr);
@@ -97,9 +87,7 @@ TEST(TaskTest, MoveOnlyResult) {
 }
 
 TEST(TaskTest, TaskIsMoveOnly) {
-    auto task = []() -> Task<int> {
-        co_return 42;
-    };
+    auto task = []() -> Task<int> { co_return 42; };
 
     Task<int> t1 = task();
     Task<int> t2 = std::move(t1);
@@ -125,7 +113,7 @@ TEST(TaskTest, LazyExecution) {
     EXPECT_FALSE(started);  // Should not have started yet
 
     int result = SyncWait(std::move(t));
-    EXPECT_TRUE(started);   // Now it should have run
+    EXPECT_TRUE(started);  // Now it should have run
     EXPECT_EQ(result, 42);
 }
 
@@ -150,8 +138,14 @@ TEST(TaskTest, VoidMoveAssignment) {
     bool flag1 = false;
     bool flag2 = false;
 
-    auto make1 = [&]() -> Task<void> { flag1 = true; co_return; };
-    auto make2 = [&]() -> Task<void> { flag2 = true; co_return; };
+    auto make1 = [&]() -> Task<void> {
+        flag1 = true;
+        co_return;
+    };
+    auto make2 = [&]() -> Task<void> {
+        flag2 = true;
+        co_return;
+    };
 
     Task<void> t1 = make1();
     Task<void> t2 = make2();
@@ -193,27 +187,21 @@ TEST(TaskTest, LargeReturnValue) {
 }
 
 TEST(TaskTest, DoubleReturnValue) {
-    auto task = []() -> Task<double> {
-        co_return 3.14159;
-    };
+    auto task = []() -> Task<double> { co_return 3.14159; };
 
     double result = SyncWait(task());
     EXPECT_DOUBLE_EQ(result, 3.14159);
 }
 
 TEST(TaskTest, BoolReturnValue) {
-    auto task = [](bool val) -> Task<bool> {
-        co_return val;
-    };
+    auto task = [](bool val) -> Task<bool> { co_return val; };
 
     EXPECT_TRUE(SyncWait(task(true)));
     EXPECT_FALSE(SyncWait(task(false)));
 }
 
 TEST(TaskTest, PairReturnValue) {
-    auto task = []() -> Task<std::pair<int, std::string>> {
-        co_return std::make_pair(42, std::string("hello"));
-    };
+    auto task = []() -> Task<std::pair<int, std::string>> { co_return std::make_pair(42, std::string("hello")); };
 
     auto [num, str] = SyncWait(task());
     EXPECT_EQ(num, 42);

@@ -9,9 +9,9 @@
 //
 // ============================================================================
 
-#include <iostream>
-
 #include "hotcoco/hotcoco.hpp"
+
+#include <iostream>
 
 using namespace hotcoco;
 
@@ -58,9 +58,7 @@ int main() {
 
     // Example 4: Lambda coroutine
     std::cout << "--- Example 4: Lambda Coroutine ---" << std::endl;
-    auto lambda_task = []() -> Task<std::string> {
-        co_return "Lambda coroutines work too!";
-    };
+    auto lambda_task = []() -> Task<std::string> { co_return "Lambda coroutines work too!"; };
     std::string msg = SyncWait(lambda_task());
     std::cout << msg << std::endl;
 

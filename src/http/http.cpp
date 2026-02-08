@@ -4,10 +4,10 @@
 
 #include "hotcoco/http/http.hpp"
 
+#include "hotcoco/core/spawn.hpp"
+
 #include <chrono>
 #include <sstream>
-
-#include "hotcoco/core/spawn.hpp"
 
 namespace hotcoco {
 
@@ -17,27 +17,43 @@ namespace hotcoco {
 
 const char* HttpMethodToString(HttpMethod method) {
     switch (method) {
-        case HttpMethod::GET: return "GET";
-        case HttpMethod::POST: return "POST";
-        case HttpMethod::PUT: return "PUT";
-        case HttpMethod::DELETE: return "DELETE";
-        case HttpMethod::PATCH: return "PATCH";
-        case HttpMethod::HEAD: return "HEAD";
-        case HttpMethod::OPTIONS: return "OPTIONS";
-        default: return "UNKNOWN";
+        case HttpMethod::GET:
+            return "GET";
+        case HttpMethod::POST:
+            return "POST";
+        case HttpMethod::PUT:
+            return "PUT";
+        case HttpMethod::DELETE:
+            return "DELETE";
+        case HttpMethod::PATCH:
+            return "PATCH";
+        case HttpMethod::HEAD:
+            return "HEAD";
+        case HttpMethod::OPTIONS:
+            return "OPTIONS";
+        default:
+            return "UNKNOWN";
     }
 }
 
 HttpMethod HttpMethodFromLlhttp(llhttp_method_t method) {
     switch (method) {
-        case HTTP_GET: return HttpMethod::GET;
-        case HTTP_POST: return HttpMethod::POST;
-        case HTTP_PUT: return HttpMethod::PUT;
-        case HTTP_DELETE: return HttpMethod::DELETE;
-        case HTTP_PATCH: return HttpMethod::PATCH;
-        case HTTP_HEAD: return HttpMethod::HEAD;
-        case HTTP_OPTIONS: return HttpMethod::OPTIONS;
-        default: return HttpMethod::UNKNOWN;
+        case HTTP_GET:
+            return HttpMethod::GET;
+        case HTTP_POST:
+            return HttpMethod::POST;
+        case HTTP_PUT:
+            return HttpMethod::PUT;
+        case HTTP_DELETE:
+            return HttpMethod::DELETE;
+        case HTTP_PATCH:
+            return HttpMethod::PATCH;
+        case HTTP_HEAD:
+            return HttpMethod::HEAD;
+        case HTTP_OPTIONS:
+            return HttpMethod::OPTIONS;
+        default:
+            return HttpMethod::UNKNOWN;
     }
 }
 
@@ -61,8 +77,7 @@ bool HttpRequest::ShouldKeepAlive() const {
     std::string conn = GetHeader("Connection");
     // Case-insensitive value comparison
     auto toLower = [](std::string s) {
-        std::transform(s.begin(), s.end(), s.begin(),
-                       [](unsigned char c) { return std::tolower(c); });
+        std::transform(s.begin(), s.end(), s.begin(), [](unsigned char c) { return std::tolower(c); });
         return s;
     };
     std::string conn_lower = toLower(conn);
@@ -135,14 +150,14 @@ HttpResponse& HttpResponse::SetHeader(const std::string& name, const std::string
 std::string HttpResponse::Serialize() const {
     std::ostringstream oss;
     oss << "HTTP/1.1 " << status_code << " " << status_text << "\r\n";
-    
+
     for (const auto& [name, value] : headers) {
         oss << name << ": " << value << "\r\n";
     }
-    
+
     oss << "\r\n";
     oss << body;
-    
+
     return oss.str();
 }
 
@@ -152,13 +167,13 @@ std::string HttpResponse::Serialize() const {
 
 HttpParser::HttpParser() {
     llhttp_settings_init(&settings_);
-    
+
     settings_.on_url = OnUrl;
     settings_.on_header_field = OnHeaderField;
     settings_.on_header_value = OnHeaderValue;
     settings_.on_body = OnBody;
     settings_.on_message_complete = OnMessageComplete;
-    
+
     llhttp_init(&parser_, HTTP_REQUEST, &settings_);
     parser_.data = this;
 }
@@ -167,9 +182,9 @@ HttpParser::~HttpParser() = default;
 
 bool HttpParser::Parse(const char* data, size_t len) {
     if (error_) return false;
-    
+
     llhttp_errno_t err = llhttp_execute(&parser_, data, len);
-    
+
     if (err != HPE_OK) {
         // Only overwrite error_message_ if the callback didn't already set
         // a custom message (e.g., "URL too long", "Too many headers").
@@ -179,7 +194,7 @@ bool HttpParser::Parse(const char* data, size_t len) {
         error_ = true;
         return false;
     }
-    
+
     return complete_;
 }
 
@@ -340,42 +355,42 @@ Task<void> HttpServer::HandleConnection(std::unique_ptr<TcpStream> stream) {
         }
 
         auto data = co_await stream->Read();
-        
+
         if (data.empty()) {
             break;
         }
-        
+
         bool complete = parser.Parse(data.data(), data.size());
-        
+
         if (parser.HasError()) {
             auto response = HttpResponse::BadRequest(parser.GetError());
             co_await stream->Write(response.Serialize());
             break;
         }
-        
+
         if (complete) {
             HttpRequest request = parser.GetRequest();
-            
+
             HttpResponse response;
             if (handler_) {
                 response = handler_(request);
             } else {
                 response = HttpResponse::NotFound("No handler configured");
             }
-            
+
             co_await stream->Write(response.Serialize());
 
             // Check keep-alive semantics (HTTP/1.0 vs HTTP/1.1)
             if (!request.ShouldKeepAlive()) {
                 break;
             }
-            
+
             parser.Reset();
             // Reset deadline for next request on keep-alive connections
             deadline = std::chrono::steady_clock::now() + read_timeout_;
         }
     }
-    
+
     stream->Close();
 }
 

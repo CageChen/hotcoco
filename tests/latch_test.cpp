@@ -2,16 +2,16 @@
 // Latch Tests
 // ============================================================================
 
-#include <gtest/gtest.h>
-
-#include <atomic>
-#include <thread>
+#include "hotcoco/sync/latch.hpp"
 
 #include "hotcoco/core/spawn.hpp"
 #include "hotcoco/core/task.hpp"
 #include "hotcoco/io/thread_pool_executor.hpp"
-#include "hotcoco/sync/latch.hpp"
 #include "hotcoco/sync/sync_wait.hpp"
+
+#include <atomic>
+#include <gtest/gtest.h>
+#include <thread>
 
 using namespace hotcoco;
 using namespace std::chrono_literals;
@@ -40,11 +40,11 @@ TEST(LatchTest, CountDownToZero) {
 TEST(LatchTest, WaitWhenAlreadyZero) {
     AsyncLatch latch(0);
     EXPECT_TRUE(latch.IsReleased());
-    
+
     auto test = [&latch]() -> Task<void> {
         co_await latch.Wait();  // Should return immediately
     };
-    
+
     SyncWait(test());
     SUCCEED();
 }
@@ -75,16 +75,16 @@ TEST(LatchTest, MultipleWaiters) {
     for (int i = 0; i < 5; i++) {
         Spawn(executor, WaitAndIncrement(latch, woken));
     }
-    
+
     // Give waiters time to start
     std::this_thread::sleep_for(50ms);
     EXPECT_EQ(woken.load(), 0);
-    
+
     // Count down
     latch.CountDown();
     latch.CountDown();
     latch.CountDown();
-    
+
     // Wait for wakeup
     auto start = std::chrono::steady_clock::now();
     while (woken.load() < 5) {
@@ -93,7 +93,7 @@ TEST(LatchTest, MultipleWaiters) {
             FAIL() << "Timeout: woken=" << woken.load();
         }
     }
-    
+
     executor.Stop();
     EXPECT_EQ(woken.load(), 5);
 }
@@ -114,7 +114,7 @@ TEST(LatchTest, WaiterAfterRelease) {
 
     // Waiter should complete immediately
     Spawn(executor, WaitAndSetFlag(latch, completed));
-    
+
     auto start = std::chrono::steady_clock::now();
     while (!completed.load()) {
         std::this_thread::sleep_for(10ms);
@@ -122,7 +122,7 @@ TEST(LatchTest, WaiterAfterRelease) {
             FAIL() << "Timeout waiting for post-release waiter";
         }
     }
-    
+
     executor.Stop();
     EXPECT_TRUE(completed.load());
 }

@@ -2,15 +2,15 @@
 // Channel Tests
 // ============================================================================
 
-#include <gtest/gtest.h>
-
-#include <thread>
-
 #include "hotcoco/core/channel.hpp"
+
 #include "hotcoco/core/spawn.hpp"
 #include "hotcoco/core/task.hpp"
 #include "hotcoco/io/thread_pool_executor.hpp"
 #include "hotcoco/sync/sync_wait.hpp"
+
+#include <gtest/gtest.h>
+#include <thread>
 
 using namespace hotcoco;
 using namespace std::chrono_literals;
@@ -21,68 +21,68 @@ using namespace std::chrono_literals;
 
 TEST(ChannelTest, SendReceive) {
     Channel<int> ch(1);
-    
+
     auto test = [&ch]() -> Task<void> {
         bool sent = co_await ch.Send(42);
         EXPECT_TRUE(sent);
-        
+
         auto val = co_await ch.Receive();
         EXPECT_TRUE(val.has_value());
         EXPECT_EQ(*val, 42);
     };
-    
+
     SyncWait(test());
 }
 
 TEST(ChannelTest, BufferedChannel) {
     Channel<int> ch(3);
-    
+
     auto test = [&ch]() -> Task<void> {
         // Fill buffer
         co_await ch.Send(1);
         co_await ch.Send(2);
         co_await ch.Send(3);
-        
+
         EXPECT_EQ(ch.Size(), 3);
-        
+
         // Drain
         EXPECT_EQ(*co_await ch.Receive(), 1);
         EXPECT_EQ(*co_await ch.Receive(), 2);
         EXPECT_EQ(*co_await ch.Receive(), 3);
     };
-    
+
     SyncWait(test());
 }
 
 TEST(ChannelTest, CloseChannel) {
     Channel<int> ch(1);
-    
+
     auto test = [&ch]() -> Task<void> {
         co_await ch.Send(42);
         ch.Close();
-        
+
         // Can still receive buffered value
         auto val = co_await ch.Receive();
         EXPECT_TRUE(val.has_value());
         EXPECT_EQ(*val, 42);
-        
+
         // Next receive returns nullopt
         auto empty = co_await ch.Receive();
         EXPECT_FALSE(empty.has_value());
     };
-    
+
     SyncWait(test());
 }
 
 TEST(ChannelTest, SendToClosedFails) {
     Channel<int> ch(1);
     ch.Close();
-    
+
     auto test = [&ch]() -> Task<void> {
         bool sent = co_await ch.Send(42);
         EXPECT_FALSE(sent);
     };
-    
+
     SyncWait(test());
 }
 
@@ -142,9 +142,7 @@ TEST(ChannelTest, SenderWakesWaitingReceiver) {
     std::this_thread::sleep_for(50ms);
 
     // Sender: puts value into buffer -- must wake the receiver
-    auto sender = [&]() -> Task<void> {
-        co_await ch.Send(99);
-    };
+    auto sender = [&]() -> Task<void> { co_await ch.Send(99); };
     Spawn(executor, sender());
 
     // Wait for receiver to get the value
@@ -172,9 +170,7 @@ TEST(ChannelTest, ReceiverWakesWaitingSender) {
     ThreadPoolExecutor executor(2);
 
     // Fill the buffer
-    SyncWait([&]() -> Task<void> {
-        co_await ch.Send(1);
-    }());
+    SyncWait([&]() -> Task<void> { co_await ch.Send(1); }());
 
     // Sender: tries to send to full buffer, will suspend
     auto sender = [&]() -> Task<void> {
@@ -338,9 +334,7 @@ TEST(ChannelTest, SenderReportsSuccessAfterWake) {
     ThreadPoolExecutor executor(2);
 
     // Fill buffer
-    SyncWait([&]() -> Task<void> {
-        co_await ch.Send(1);
-    }());
+    SyncWait([&]() -> Task<void> { co_await ch.Send(1); }());
 
     // Sender: will suspend on full buffer
     auto sender = [&]() -> Task<void> {
@@ -353,9 +347,7 @@ TEST(ChannelTest, SenderReportsSuccessAfterWake) {
     std::this_thread::sleep_for(50ms);
 
     // Drain to wake sender
-    SyncWait([&]() -> Task<void> {
-        co_await ch.Receive();
-    }());
+    SyncWait([&]() -> Task<void> { co_await ch.Receive(); }());
 
     auto start = std::chrono::steady_clock::now();
     while (!done.load()) {
@@ -404,8 +396,7 @@ TEST(ChannelTest, ReceiverValueNotStolen) {
     // Launch consumers: each tries to receive; count successes vs nullopts
     const int total = kProducers * kIterations;
     for (int c = 0; c < total; c++) {
-        Spawn(executor, [](Channel<int>* c, std::atomic<int>* vals,
-                           std::atomic<int>* nuls) -> Task<void> {
+        Spawn(executor, [](Channel<int>* c, std::atomic<int>* vals, std::atomic<int>* nuls) -> Task<void> {
             auto val = co_await c->Receive();
             if (val.has_value()) {
                 EXPECT_NE(*val, 0);
@@ -426,9 +417,8 @@ TEST(ChannelTest, ReceiverValueNotStolen) {
     }
 
     // Every sent value must be received — no theft, no spurious nullopt
-    EXPECT_EQ(values_received.load(), total)
-        << "Some values were lost (stolen by another thread between buffer "
-           "push and receiver resume)";
+    EXPECT_EQ(values_received.load(), total) << "Some values were lost (stolen by another thread between buffer "
+                                                "push and receiver resume)";
     EXPECT_EQ(nullopts_received.load(), 0);
 
     ch.Close();

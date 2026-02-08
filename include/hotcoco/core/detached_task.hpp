@@ -27,22 +27,21 @@
 
 #pragma once
 
+#include "hotcoco/core/task.hpp"
+
 #include <coroutine>
 #include <cstdlib>
 #include <functional>
 
-#include "hotcoco/core/task.hpp"
-
 namespace hotcoco {
 
 class DetachedTask {
-public:
+   public:
     struct promise_type {
         std::function<void()> callback;
 
         DetachedTask get_return_object() noexcept {
-            return DetachedTask{
-                std::coroutine_handle<promise_type>::from_promise(*this)};
+            return DetachedTask{std::coroutine_handle<promise_type>::from_promise(*this)};
         }
 
         std::suspend_always initial_suspend() noexcept { return {}; }
@@ -50,8 +49,7 @@ public:
         auto final_suspend() noexcept {
             struct FinalAwaiter {
                 bool await_ready() noexcept { return false; }
-                void await_suspend(
-                    std::coroutine_handle<promise_type> h) noexcept {
+                void await_suspend(std::coroutine_handle<promise_type> h) noexcept {
                     auto& promise = h.promise();
                     if (promise.callback) {
                         promise.callback();
@@ -79,8 +77,7 @@ public:
     explicit DetachedTask(Handle h) noexcept : handle_(h) {}
 
     // Move-only
-    DetachedTask(DetachedTask&& other) noexcept
-        : handle_(std::exchange(other.handle_, nullptr)) {}
+    DetachedTask(DetachedTask&& other) noexcept : handle_(std::exchange(other.handle_, nullptr)) {}
 
     DetachedTask& operator=(DetachedTask&& other) noexcept {
         if (this != &other) {
@@ -119,7 +116,7 @@ public:
         }
     }
 
-private:
+   private:
     Handle handle_;
     bool started_ = false;
 };

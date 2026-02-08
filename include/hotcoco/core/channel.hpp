@@ -28,11 +28,11 @@ namespace hotcoco {
 
 template <typename T>
 class Channel {
-public:
+   public:
     explicit Channel(size_t capacity = 1) : capacity_(capacity) {
         assert(capacity >= 1 && "Channel capacity must be at least 1");
     }
-    
+
     ~Channel() {
         // Do NOT call Close() here — Close() resumes waiters inline, and
         // those coroutines may re-enter this Channel (e.g. another
@@ -45,18 +45,17 @@ public:
         receiver_waiters_.clear();
         sender_waiters_.clear();
     }
-    
+
     // Non-copyable
     Channel(const Channel&) = delete;
     Channel& operator=(const Channel&) = delete;
-    
+
     // ========================================================================
     // Send Awaitable
     // ========================================================================
     class SendAwaitable {
-    public:
-        SendAwaitable(Channel& ch, T value)
-            : channel_(ch), value_(std::move(value)) {}
+       public:
+        SendAwaitable(Channel& ch, T value) : channel_(ch), value_(std::move(value)) {}
 
         bool await_ready() {
             std::coroutine_handle<> receiver_to_wake;
@@ -116,11 +115,9 @@ public:
             return false;  // Don't suspend
         }
 
-        bool await_resume() {
-            return sent_.load(std::memory_order_acquire) && !failed_;
-        }
+        bool await_resume() { return sent_.load(std::memory_order_acquire) && !failed_; }
 
-    private:
+       private:
         Channel& channel_;
         T value_;
         std::atomic<bool> sent_{false};
@@ -131,7 +128,7 @@ public:
     // Receive Awaitable
     // ========================================================================
     class ReceiveAwaitable {
-    public:
+       public:
         explicit ReceiveAwaitable(Channel& ch) : channel_(ch) {}
 
         bool await_ready() {
@@ -191,27 +188,21 @@ public:
             return false;  // Don't suspend
         }
 
-        std::optional<T> await_resume() {
-            return std::move(result_);
-        }
+        std::optional<T> await_resume() { return std::move(result_); }
 
-    private:
+       private:
         Channel& channel_;
         std::optional<T> result_;
     };
-    
+
     // ========================================================================
     // Public API
     // ========================================================================
-    
-    SendAwaitable Send(T value) {
-        return SendAwaitable(*this, std::move(value));
-    }
-    
-    ReceiveAwaitable Receive() {
-        return ReceiveAwaitable(*this);
-    }
-    
+
+    SendAwaitable Send(T value) { return SendAwaitable(*this, std::move(value)); }
+
+    ReceiveAwaitable Receive() { return ReceiveAwaitable(*this); }
+
     void Close() {
         std::vector<std::coroutine_handle<>> to_wake;
         {
@@ -235,18 +226,18 @@ public:
             h.resume();
         }
     }
-    
+
     bool IsClosed() const {
         std::lock_guard<std::mutex> lock(mutex_);
         return closed_;
     }
-    
+
     size_t Size() const {
         std::lock_guard<std::mutex> lock(mutex_);
         return buffer_.size();
     }
-    
-private:
+
+   private:
     struct SenderWaiter {
         std::coroutine_handle<> handle;
         T value;

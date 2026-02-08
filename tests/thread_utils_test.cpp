@@ -2,10 +2,9 @@
 // Thread Utilities Tests
 // ============================================================================
 
-#include <gtest/gtest.h>
-
 #include "hotcoco/io/thread_utils.hpp"
 
+#include <gtest/gtest.h>
 #include <pthread.h>
 #include <sched.h>
 #include <thread>

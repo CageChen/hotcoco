@@ -35,7 +35,7 @@
 namespace hotcoco {
 
 class AsyncEvent {
-public:
+   public:
     AsyncEvent() = default;
 
     // Non-copyable, non-movable
@@ -48,7 +48,7 @@ public:
     // WaitAwaitable
     // ========================================================================
     class WaitAwaitable {
-    public:
+       public:
         explicit WaitAwaitable(AsyncEvent& event) : event_(event) {}
 
         bool await_ready() noexcept {
@@ -67,7 +67,7 @@ public:
 
         void await_resume() noexcept {}
 
-    private:
+       private:
         AsyncEvent& event_;
     };
 
@@ -75,9 +75,7 @@ public:
     // Public API
     // ========================================================================
 
-    WaitAwaitable Wait() {
-        return WaitAwaitable(*this);
-    }
+    WaitAwaitable Wait() { return WaitAwaitable(*this); }
 
     // Set the event, resuming all current waiters.
     // Future co_await Wait() calls will pass through immediately.
@@ -109,7 +107,7 @@ public:
         return signaled_;
     }
 
-private:
+   private:
     mutable std::mutex mutex_;
     bool signaled_ = false;
     std::vector<std::coroutine_handle<>> waiters_;

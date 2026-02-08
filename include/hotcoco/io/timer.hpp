@@ -27,10 +27,10 @@
 
 #pragma once
 
+#include "hotcoco/io/executor.hpp"
+
 #include <chrono>
 #include <coroutine>
-
-#include "hotcoco/io/executor.hpp"
 
 namespace hotcoco {
 
@@ -42,13 +42,12 @@ namespace hotcoco {
 // When resumed, it returns void (no value).
 //
 class AsyncSleep {
-public:
+   public:
     // ========================================================================
     // Construction
     // ========================================================================
 
-    explicit AsyncSleep(std::chrono::milliseconds duration)
-        : duration_(duration) {}
+    explicit AsyncSleep(std::chrono::milliseconds duration) : duration_(duration) {}
 
     // Convenience constructors for different duration types
     template <typename Rep, typename Period>
@@ -81,7 +80,7 @@ public:
     // Nothing to return after sleeping
     void await_resume() const noexcept {}
 
-private:
+   private:
     std::chrono::milliseconds duration_;
 };
 

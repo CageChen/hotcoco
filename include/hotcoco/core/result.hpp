@@ -60,7 +60,7 @@ class Result;
 template <typename T>
 struct OkTag {
     T value;
-    
+
     template <typename U>
     explicit OkTag(U&& v) : value(std::forward<U>(v)) {}
 };
@@ -68,7 +68,7 @@ struct OkTag {
 template <typename E>
 struct ErrTag {
     E error;
-    
+
     template <typename U>
     explicit ErrTag(U&& e) : error(std::forward<U>(e)) {}
 };
@@ -96,63 +96,63 @@ inline OkTag<Unit> Ok() {
 // ============================================================================
 template <typename T, typename E>
 class Result {
-public:
+   public:
     // ========================================================================
     // Construction
     // ========================================================================
-    
+
     // Construct from OkTag
     template <typename U>
     Result(OkTag<U>&& ok) : data_(std::in_place_index<0>, std::move(ok.value)) {}
-    
+
     // Construct from ErrTag
     template <typename U>
     Result(ErrTag<U>&& err) : data_(std::in_place_index<1>, std::move(err.error)) {}
-    
+
     // Copy/Move
     Result(const Result&) = default;
     Result(Result&&) = default;
     Result& operator=(const Result&) = default;
     Result& operator=(Result&&) = default;
-    
+
     // ========================================================================
     // Observers
     // ========================================================================
-    
+
     bool IsOk() const noexcept { return data_.index() == 0; }
     bool IsErr() const noexcept { return data_.index() == 1; }
-    
+
     explicit operator bool() const noexcept { return IsOk(); }
-    
+
     // ========================================================================
     // Accessors
     // ========================================================================
-    
+
     // Get value (undefined behavior if IsErr())
     T& Value() & { return std::get<0>(data_); }
     const T& Value() const& { return std::get<0>(data_); }
     T&& Value() && { return std::get<0>(std::move(data_)); }
-    
+
     // Get error (undefined behavior if IsOk())
     E& Error() & { return std::get<1>(data_); }
     const E& Error() const& { return std::get<1>(data_); }
     E&& Error() && { return std::get<1>(std::move(data_)); }
-    
+
     // Safe accessors
     std::optional<T> ValueOr() const {
         if (IsOk()) return std::get<0>(data_);
         return std::nullopt;
     }
-    
+
     T ValueOr(T default_value) const {
         if (IsOk()) return std::get<0>(data_);
         return default_value;
     }
-    
+
     // ========================================================================
     // Combinators
     // ========================================================================
-    
+
     // Map: Transform success value
     template <typename F>
     auto Map(F&& func) const& -> Result<std::invoke_result_t<F, const T&>, E> {
@@ -161,7 +161,7 @@ public:
         }
         return Err(Error());
     }
-    
+
     template <typename F>
     auto Map(F&& func) && -> Result<std::invoke_result_t<F, T&&>, E> {
         if (IsOk()) {
@@ -169,7 +169,7 @@ public:
         }
         return Err(std::move(*this).Error());
     }
-    
+
     // MapErr: Transform error value
     template <typename F>
     auto MapErr(F&& func) const& -> Result<T, std::invoke_result_t<F, const E&>> {
@@ -178,7 +178,7 @@ public:
         }
         return Ok(Value());
     }
-    
+
     // AndThen: Chain operations that return Result
     template <typename F>
     auto AndThen(F&& func) && -> std::invoke_result_t<F, T&&> {
@@ -187,7 +187,7 @@ public:
         }
         return Err(std::move(*this).Error());
     }
-    
+
     // OrElse: Recover from error
     template <typename F>
     auto OrElse(F&& func) && -> std::invoke_result_t<F, E&&> {
@@ -196,8 +196,8 @@ public:
         }
         return Ok(std::move(*this).Value());
     }
-    
-private:
+
+   private:
     std::variant<T, E> data_;
 };
 
@@ -208,22 +208,22 @@ private:
 
 template <typename E>
 class Result<void, E> {
-public:
+   public:
     Result(OkTag<Unit>&&) : error_(std::nullopt) {}
-    
+
     template <typename U>
     Result(ErrTag<U>&& err) : error_(std::move(err.error)) {}
-    
+
     bool IsOk() const noexcept { return !error_.has_value(); }
     bool IsErr() const noexcept { return error_.has_value(); }
-    
+
     explicit operator bool() const noexcept { return IsOk(); }
-    
+
     E& Error() & { return *error_; }
     const E& Error() const& { return *error_; }
     E&& Error() && { return std::move(*error_); }
-    
-private:
+
+   private:
     std::optional<E> error_;
 };
 

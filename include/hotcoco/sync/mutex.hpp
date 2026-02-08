@@ -14,7 +14,7 @@
 // USAGE:
 // ------
 //   AsyncMutex mutex;
-//   
+//
 //   Task<void> Work() {
 //       auto lock = co_await mutex.Lock();
 //       // Critical section
@@ -32,24 +32,22 @@
 namespace hotcoco {
 
 class AsyncMutex {
-public:
+   public:
     // ========================================================================
     // ScopedLock - RAII lock guard
     // ========================================================================
     class ScopedLock {
-    public:
+       public:
         explicit ScopedLock(AsyncMutex& mutex) : mutex_(&mutex) {}
-        
+
         ~ScopedLock() {
             if (mutex_) {
                 mutex_->Unlock();
             }
         }
-        
+
         // Move only
-        ScopedLock(ScopedLock&& other) noexcept : mutex_(other.mutex_) {
-            other.mutex_ = nullptr;
-        }
+        ScopedLock(ScopedLock&& other) noexcept : mutex_(other.mutex_) { other.mutex_ = nullptr; }
         ScopedLock& operator=(ScopedLock&& other) noexcept {
             if (this != &other) {
                 if (mutex_) mutex_->Unlock();
@@ -58,21 +56,21 @@ public:
             }
             return *this;
         }
-        
+
         ScopedLock(const ScopedLock&) = delete;
         ScopedLock& operator=(const ScopedLock&) = delete;
-        
-    private:
+
+       private:
         AsyncMutex* mutex_;
     };
-    
+
     // ========================================================================
     // LockAwaitable
     // ========================================================================
     class LockAwaitable {
-    public:
+       public:
         explicit LockAwaitable(AsyncMutex& mutex) : mutex_(mutex) {}
-        
+
         bool await_ready() {
             std::lock_guard<std::mutex> lock(mutex_.mutex_);
             if (!mutex_.locked_) {
@@ -81,7 +79,7 @@ public:
             }
             return false;
         }
-        
+
         bool await_suspend(std::coroutine_handle<> h) {
             std::lock_guard<std::mutex> lock(mutex_.mutex_);
             if (!mutex_.locked_) {
@@ -91,25 +89,23 @@ public:
             mutex_.waiters_.push_back(h);
             return true;  // Suspend
         }
-        
-        ScopedLock await_resume() {
-            return ScopedLock(mutex_);
-        }
-        
-    private:
+
+        ScopedLock await_resume() { return ScopedLock(mutex_); }
+
+       private:
         AsyncMutex& mutex_;
     };
-    
+
     // ========================================================================
     // TryLockAwaitable
     // ========================================================================
     class TryLockAwaitable {
-    public:
+       public:
         explicit TryLockAwaitable(AsyncMutex& mutex) : mutex_(mutex) {}
-        
+
         bool await_ready() { return true; }  // Always ready
         void await_suspend(std::coroutine_handle<>) {}
-        
+
         std::optional<ScopedLock> await_resume() {
             std::lock_guard<std::mutex> lock(mutex_.mutex_);
             if (!mutex_.locked_) {
@@ -118,24 +114,20 @@ public:
             }
             return std::nullopt;
         }
-        
-    private:
+
+       private:
         AsyncMutex& mutex_;
     };
-    
+
     // ========================================================================
     // Public API
     // ========================================================================
-    
-    LockAwaitable Lock() {
-        return LockAwaitable(*this);
-    }
-    
-    TryLockAwaitable TryLock() {
-        return TryLockAwaitable(*this);
-    }
-    
-private:
+
+    LockAwaitable Lock() { return LockAwaitable(*this); }
+
+    TryLockAwaitable TryLock() { return TryLockAwaitable(*this); }
+
+   private:
     void Unlock() {
         std::coroutine_handle<> to_wake;
         {
@@ -148,12 +140,12 @@ private:
                 locked_ = false;
             }
         }
-        
+
         if (to_wake) {
             to_wake.resume();
         }
     }
-    
+
     std::mutex mutex_;
     bool locked_ = false;
     std::deque<std::coroutine_handle<>> waiters_;

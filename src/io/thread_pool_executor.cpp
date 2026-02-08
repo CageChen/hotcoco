@@ -22,8 +22,7 @@ ThreadPoolExecutor::ThreadPoolExecutor(size_t num_threads) {
     InitWorkers();
 }
 
-ThreadPoolExecutor::ThreadPoolExecutor(const Options& options)
-    : options_(options) {
+ThreadPoolExecutor::ThreadPoolExecutor(const Options& options) : options_(options) {
     if (options_.num_threads == 0) {
         options_.num_threads = 1;
     }
@@ -32,13 +31,13 @@ ThreadPoolExecutor::ThreadPoolExecutor(const Options& options)
 
 void ThreadPoolExecutor::InitWorkers() {
     running_ = true;
-    
+
     // Start worker threads
     workers_.reserve(options_.num_threads);
     for (size_t i = 0; i < options_.num_threads; ++i) {
         workers_.emplace_back([this, i] { WorkerLoop(i); });
     }
-    
+
     // Start timer thread
     timer_thread_ = std::thread([this] { TimerLoop(); });
 }
@@ -74,18 +73,15 @@ ThreadPoolExecutor::~ThreadPoolExecutor() {
 void ThreadPoolExecutor::Run() {
     running_ = true;
     stopping_ = false;
-    
+
     // Wait until stopped or no more work
     std::unique_lock<std::mutex> lock(queue_mutex_);
-    work_available_.wait(lock, [this] {
-        return stopping_ || 
-               (work_queue_.empty() && active_tasks_ == 0);
-    });
+    work_available_.wait(lock, [this] { return stopping_ || (work_queue_.empty() && active_tasks_ == 0); });
 }
 
 void ThreadPoolExecutor::RunOnce() {
     WorkItem item{std::coroutine_handle<>{nullptr}};
-    
+
     {
         std::unique_lock<std::mutex> lock(queue_mutex_);
         if (work_queue_.empty()) {
@@ -94,7 +90,7 @@ void ThreadPoolExecutor::RunOnce() {
         item = std::move(work_queue_.front());
         work_queue_.pop();
     }
-    
+
     // Execute the item
     if (item.handle) {
         active_tasks_++;
@@ -120,7 +116,7 @@ bool ThreadPoolExecutor::IsRunning() const {
 
 void ThreadPoolExecutor::Schedule(std::coroutine_handle<> handle) {
     if (!handle) return;
-    
+
     {
         std::lock_guard<std::mutex> lock(queue_mutex_);
         work_queue_.emplace(handle);
@@ -128,12 +124,11 @@ void ThreadPoolExecutor::Schedule(std::coroutine_handle<> handle) {
     work_available_.notify_one();
 }
 
-void ThreadPoolExecutor::ScheduleAfter(std::chrono::milliseconds delay,
-                                        std::coroutine_handle<> handle) {
+void ThreadPoolExecutor::ScheduleAfter(std::chrono::milliseconds delay, std::coroutine_handle<> handle) {
     if (!handle) return;
-    
+
     auto when = std::chrono::steady_clock::now() + delay;
-    
+
     {
         std::lock_guard<std::mutex> lock(delayed_mutex_);
         delayed_queue_.push({when, handle});
@@ -143,7 +138,7 @@ void ThreadPoolExecutor::ScheduleAfter(std::chrono::milliseconds delay,
 
 void ThreadPoolExecutor::Post(std::function<void()> callback) {
     if (!callback) return;
-    
+
     {
         std::lock_guard<std::mutex> lock(queue_mutex_);
         work_queue_.emplace(std::move(callback));
@@ -176,20 +171,18 @@ void ThreadPoolExecutor::WorkerLoop(size_t worker_index) {
     if (options_.nice_value != 0) {
         SetThreadNice(options_.nice_value);
     }
-    
+
     while (!stopping_) {
         WorkItem item{std::coroutine_handle<>{nullptr}};
-        
+
         {
             std::unique_lock<std::mutex> lock(queue_mutex_);
-            work_available_.wait(lock, [this] {
-                return stopping_ || !work_queue_.empty();
-            });
-            
+            work_available_.wait(lock, [this] { return stopping_ || !work_queue_.empty(); });
+
             if (stopping_ && work_queue_.empty()) {
                 break;
             }
-            
+
             if (!work_queue_.empty()) {
                 item = std::move(work_queue_.front());
                 work_queue_.pop();
@@ -213,7 +206,7 @@ void ThreadPoolExecutor::WorkerLoop(size_t worker_index) {
             work_available_.notify_all();
         }
     }
-    
+
     SetCurrentExecutor(nullptr);
 }
 
@@ -224,34 +217,30 @@ void ThreadPoolExecutor::WorkerLoop(size_t worker_index) {
 void ThreadPoolExecutor::TimerLoop() {
     while (!stopping_) {
         std::coroutine_handle<> handle{nullptr};
-        
+
         {
             std::unique_lock<std::mutex> lock(delayed_mutex_);
-            
+
             if (delayed_queue_.empty()) {
                 // Wait for new delayed work or stop
-                delayed_cv_.wait(lock, [this] {
-                    return stopping_ || !delayed_queue_.empty();
-                });
+                delayed_cv_.wait(lock, [this] { return stopping_ || !delayed_queue_.empty(); });
                 continue;
             }
-            
+
             // Wait until soonest item is ready
             auto& top = delayed_queue_.top();
-            if (delayed_cv_.wait_until(lock, top.when, [this] {
-                return stopping_.load();
-            })) {
+            if (delayed_cv_.wait_until(lock, top.when, [this] { return stopping_.load(); })) {
                 // Stopping
                 break;
             }
-            
+
             // Check if it's time
             if (std::chrono::steady_clock::now() >= top.when) {
                 handle = top.handle;
                 delayed_queue_.pop();
             }
         }
-        
+
         // Schedule the handle on the work queue
         if (handle) {
             Schedule(handle);

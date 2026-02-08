@@ -2,11 +2,10 @@
 // Defer Tests
 // ============================================================================
 
-#include <gtest/gtest.h>
-
-#include <string>
-
 #include "hotcoco/core/defer.hpp"
+
+#include <gtest/gtest.h>
+#include <string>
 
 using namespace hotcoco;
 

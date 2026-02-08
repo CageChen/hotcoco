@@ -2,11 +2,10 @@
 // Error Code Tests
 // ============================================================================
 
-#include <gtest/gtest.h>
-
-#include <string>
-
 #include "hotcoco/core/error.hpp"
+
+#include <gtest/gtest.h>
+#include <string>
 
 using namespace hotcoco;
 

@@ -2,16 +2,16 @@
 // RWLock Tests
 // ============================================================================
 
-#include <gtest/gtest.h>
-
-#include <atomic>
-#include <thread>
+#include "hotcoco/sync/rwlock.hpp"
 
 #include "hotcoco/core/spawn.hpp"
 #include "hotcoco/core/task.hpp"
 #include "hotcoco/io/thread_pool_executor.hpp"
-#include "hotcoco/sync/rwlock.hpp"
 #include "hotcoco/sync/sync_wait.hpp"
+
+#include <atomic>
+#include <gtest/gtest.h>
+#include <thread>
 
 using namespace hotcoco;
 using namespace std::chrono_literals;
@@ -22,37 +22,37 @@ using namespace std::chrono_literals;
 
 TEST(RWLockTest, ReadLock) {
     AsyncRWLock lock;
-    
+
     auto test = [&lock]() -> Task<void> {
         auto guard = co_await lock.ReadLock();
         // Can read
     };
-    
+
     SyncWait(test());
     SUCCEED();
 }
 
 TEST(RWLockTest, WriteLock) {
     AsyncRWLock lock;
-    
+
     auto test = [&lock]() -> Task<void> {
         auto guard = co_await lock.WriteLock();
         // Exclusive access
     };
-    
+
     SyncWait(test());
     SUCCEED();
 }
 
 TEST(RWLockTest, MultipleReaders) {
     AsyncRWLock lock;
-    
+
     auto test = [&lock]() -> Task<void> {
         auto g1 = co_await lock.ReadLock();
         // In real usage, multiple readers would acquire simultaneously
         // This test just verifies the API works
     };
-    
+
     SyncWait(test());
     SUCCEED();
 }
@@ -90,7 +90,7 @@ TEST(RWLockTest, ProtectsData) {
     for (int i = 0; i < kReaders; i++) {
         Spawn(executor, ReaderTask(lock, data, completed));
     }
-    
+
     // Wait for completion
     auto start = std::chrono::steady_clock::now();
     while (completed.load() < kWriters + kReaders) {
@@ -99,7 +99,7 @@ TEST(RWLockTest, ProtectsData) {
             FAIL() << "Timeout: " << completed.load();
         }
     }
-    
+
     executor.Stop();
     EXPECT_EQ(data, kWriters);
 }
@@ -161,8 +161,6 @@ TEST(RWLockTest, WriteGuardMove) {
     SyncWait(test());
 
     // Verify write lock is released
-    auto test2 = [&]() -> Task<void> {
-        auto rg = co_await lock.ReadLock();
-    };
+    auto test2 = [&]() -> Task<void> { auto rg = co_await lock.ReadLock(); };
     SyncWait(test2());
 }

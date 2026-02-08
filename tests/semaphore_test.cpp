@@ -2,16 +2,16 @@
 // Semaphore Tests
 // ============================================================================
 
-#include <gtest/gtest.h>
-
-#include <atomic>
-#include <thread>
+#include "hotcoco/sync/semaphore.hpp"
 
 #include "hotcoco/core/spawn.hpp"
 #include "hotcoco/core/task.hpp"
 #include "hotcoco/io/thread_pool_executor.hpp"
-#include "hotcoco/sync/semaphore.hpp"
 #include "hotcoco/sync/sync_wait.hpp"
+
+#include <atomic>
+#include <gtest/gtest.h>
+#include <thread>
 
 using namespace hotcoco;
 using namespace std::chrono_literals;
@@ -22,7 +22,7 @@ using namespace std::chrono_literals;
 
 TEST(SemaphoreTest, AcquireRelease) {
     AsyncSemaphore sem(1);
-    
+
     auto test = [&sem]() -> Task<void> {
         {
             auto guard = co_await sem.Acquire();
@@ -30,20 +30,20 @@ TEST(SemaphoreTest, AcquireRelease) {
         }
         EXPECT_EQ(sem.Available(), 1);
     };
-    
+
     SyncWait(test());
 }
 
 TEST(SemaphoreTest, MultipleAcquires) {
     AsyncSemaphore sem(3);
-    
+
     auto test = [&sem]() -> Task<void> {
         auto g1 = co_await sem.Acquire();
         auto g2 = co_await sem.Acquire();
         auto g3 = co_await sem.Acquire();
         EXPECT_EQ(sem.Available(), 0);
     };
-    
+
     SyncWait(test());
     EXPECT_EQ(sem.Available(), 3);
 }
@@ -52,14 +52,15 @@ TEST(SemaphoreTest, MultipleAcquires) {
 // Concurrency Tests
 // ============================================================================
 
-Task<void> AcquireAndTrack(AsyncSemaphore& sem, std::atomic<int>& concurrent,
-                          std::atomic<int>& max_concurrent, std::atomic<int>& completed) {
+Task<void> AcquireAndTrack(AsyncSemaphore& sem, std::atomic<int>& concurrent, std::atomic<int>& max_concurrent,
+                           std::atomic<int>& completed) {
     auto guard = co_await sem.Acquire();
     int val = ++concurrent;
 
     // Track max concurrency
     int cur_max = max_concurrent.load();
-    while (val > cur_max && !max_concurrent.compare_exchange_weak(cur_max, val)) {}
+    while (val > cur_max && !max_concurrent.compare_exchange_weak(cur_max, val)) {
+    }
 
     std::this_thread::sleep_for(10ms);
     concurrent--;
@@ -77,7 +78,7 @@ TEST(SemaphoreTest, LimitsConcurrency) {
     for (int i = 0; i < kTasks; i++) {
         Spawn(executor, AcquireAndTrack(sem, concurrent, max_concurrent, completed));
     }
-    
+
     // Wait for completion
     auto start = std::chrono::steady_clock::now();
     while (completed.load() < kTasks) {
@@ -86,7 +87,7 @@ TEST(SemaphoreTest, LimitsConcurrency) {
             FAIL() << "Timeout: " << completed.load();
         }
     }
-    
+
     executor.Stop();
     EXPECT_LE(max_concurrent.load(), 3);
     EXPECT_EQ(completed.load(), kTasks);

@@ -2,16 +2,16 @@
 // Concepts Tests
 // ============================================================================
 
-#include <gtest/gtest.h>
-
-#include <coroutine>
-#include <string>
-
 #include "hotcoco/core/concepts.hpp"
-#include "hotcoco/core/task.hpp"
+
 #include "hotcoco/core/generator.hpp"
+#include "hotcoco/core/task.hpp"
 #include "hotcoco/io/timer.hpp"
 #include "hotcoco/sync/event.hpp"
+
+#include <coroutine>
+#include <gtest/gtest.h>
+#include <string>
 
 using namespace hotcoco;
 
@@ -36,9 +36,7 @@ struct BoolSuspendAwaiter {
 // Awaiter returning coroutine_handle from await_suspend (symmetric transfer)
 struct HandleSuspendAwaiter {
     bool await_ready() { return false; }
-    std::coroutine_handle<> await_suspend(std::coroutine_handle<>) {
-        return std::noop_coroutine();
-    }
+    std::coroutine_handle<> await_suspend(std::coroutine_handle<>) { return std::noop_coroutine(); }
     std::string await_resume() { return "hello"; }
 };
 

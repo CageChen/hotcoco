@@ -110,9 +110,8 @@ using AwaiterType = decltype(GetAwaiter(std::declval<T>()));
 //
 
 template <typename T>
-concept Awaitable = Awaiter<T> ||
-    (detail::HasMemberCoAwait<T> && Awaiter<detail::AwaiterType<T>>) ||
-    (detail::HasFreeCoAwait<T> && Awaiter<detail::AwaiterType<T>>);
+concept Awaitable = Awaiter<T> || (detail::HasMemberCoAwait<T> && Awaiter<detail::AwaiterType<T>>) ||
+                    (detail::HasFreeCoAwait<T> && Awaiter<detail::AwaiterType<T>>);
 
 // ============================================================================
 // AwaitResult - trait to get the return type of co_await
@@ -129,9 +128,7 @@ using AwaitResult = decltype(std::declval<detail::AwaiterType<T>>().await_resume
 //
 
 template <typename T, typename R>
-concept AwaitableOf = Awaitable<T> && requires {
-    requires std::convertible_to<AwaitResult<T>, R>;
-};
+concept AwaitableOf = Awaitable<T> && requires { requires std::convertible_to<AwaitResult<T>, R>; };
 
 // Specialization: AwaitableOf<T, void> matches any awaitable returning void
 template <typename T>

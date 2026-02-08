@@ -22,6 +22,9 @@
 
 #pragma once
 
+#include "hotcoco/core/error.hpp"
+#include "hotcoco/core/result.hpp"
+
 #include <cstdint>
 #include <memory>
 #include <string>
@@ -29,16 +32,13 @@
 #include <system_error>
 #include <vector>
 
-#include "hotcoco/core/error.hpp"
-#include "hotcoco/core/result.hpp"
-
 namespace hotcoco {
 
 // ============================================================================
 // SyncTcpStream - Blocking TCP Connection
 // ============================================================================
 class SyncTcpStream {
-public:
+   public:
     ~SyncTcpStream();
 
     // Non-copyable, movable
@@ -52,8 +52,7 @@ public:
     // ========================================================================
 
     // Connect to a server (blocking)
-    static Result<std::unique_ptr<SyncTcpStream>, std::error_code> Connect(
-        const std::string& host, uint16_t port);
+    static Result<std::unique_ptr<SyncTcpStream>, std::error_code> Connect(const std::string& host, uint16_t port);
 
     // ========================================================================
     // Data Transfer
@@ -79,7 +78,7 @@ public:
     bool IsOpen() const { return fd_ >= 0; }
     int GetFd() const { return fd_; }
 
-private:
+   private:
     friend class SyncTcpListener;
 
     SyncTcpStream() = default;
@@ -92,7 +91,7 @@ private:
 // SyncTcpListener - Blocking TCP Server
 // ============================================================================
 class SyncTcpListener {
-public:
+   public:
     ~SyncTcpListener();
 
     // Non-copyable, movable
@@ -106,8 +105,8 @@ public:
     // ========================================================================
 
     // Create a listening socket
-    static Result<std::unique_ptr<SyncTcpListener>, std::error_code> Listen(
-        const std::string& host, uint16_t port, int backlog = 128);
+    static Result<std::unique_ptr<SyncTcpListener>, std::error_code> Listen(const std::string& host, uint16_t port,
+                                                                            int backlog = 128);
 
     // ========================================================================
     // Accept
@@ -123,7 +122,7 @@ public:
     uint16_t GetPort() const { return port_; }
     int GetFd() const { return fd_; }
 
-private:
+   private:
     SyncTcpListener() = default;
 
     int fd_ = -1;

@@ -2,19 +2,19 @@
 // Retry Tests
 // ============================================================================
 
-#include <gtest/gtest.h>
-
-#include <atomic>
-#include <thread>
+#include "hotcoco/core/retry.hpp"
 
 #include "hotcoco/core/error.hpp"
 #include "hotcoco/core/result.hpp"
-#include "hotcoco/core/retry.hpp"
 #include "hotcoco/core/spawn.hpp"
 #include "hotcoco/core/task.hpp"
 #include "hotcoco/io/libuv_executor.hpp"
 #include "hotcoco/io/timer.hpp"
 #include "hotcoco/sync/sync_wait.hpp"
+
+#include <atomic>
+#include <gtest/gtest.h>
+#include <thread>
 
 using namespace hotcoco;
 using namespace std::chrono_literals;
@@ -25,9 +25,7 @@ using namespace std::chrono_literals;
 
 TEST(RetryTest, SucceedsFirstTry) {
     auto test = []() -> Task<Result<int, std::error_code>> {
-        co_return co_await Retry([]() -> Task<Result<int, std::error_code>> {
-            co_return Ok(42);
-        }).Execute();
+        co_return co_await Retry([]() -> Task<Result<int, std::error_code>> { co_return Ok(42); }).Execute();
     };
 
     auto result = SyncWait(test());
@@ -44,9 +42,10 @@ TEST(RetryTest, SucceedsAfterRetry) {
                 co_return Err(make_error_code(Errc::IoError));
             }
             co_return Ok(42);
-        }).MaxAttempts(5)
-          .WithExponentialBackoff(10ms)
-          .Execute();
+        })
+            .MaxAttempts(5)
+            .WithExponentialBackoff(10ms)
+            .Execute();
     };
 
     auto result = SyncWait(test());
@@ -62,9 +61,10 @@ TEST(RetryTest, ExhaustsRetries) {
         co_return co_await Retry([&attempts]() -> Task<Result<int, std::error_code>> {
             attempts++;
             co_return Err(make_error_code(Errc::IoError));
-        }).MaxAttempts(3)
-          .WithExponentialBackoff(1ms)
-          .Execute();
+        })
+            .MaxAttempts(3)
+            .WithExponentialBackoff(1ms)
+            .Execute();
     };
 
     auto result = SyncWait(test());
@@ -80,12 +80,13 @@ TEST(RetryTest, RetryIfPredicate) {
         co_return co_await Retry([&attempts]() -> Task<Result<int, std::error_code>> {
             attempts++;
             co_return Err(make_error_code(Errc::InvalidArgument));
-        }).MaxAttempts(5)
-          .RetryIf([](std::error_code ec) {
-              // Only retry IoError, not InvalidArgument
-              return ec == make_error_code(Errc::IoError);
-          })
-          .Execute();
+        })
+            .MaxAttempts(5)
+            .RetryIf([](std::error_code ec) {
+                // Only retry IoError, not InvalidArgument
+                return ec == make_error_code(Errc::IoError);
+            })
+            .Execute();
     };
 
     auto result = SyncWait(test());
@@ -102,10 +103,11 @@ TEST(RetryTest, NoJitter) {
                 co_return Err(make_error_code(Errc::IoError));
             }
             co_return Ok(42);
-        }).MaxAttempts(3)
-          .WithExponentialBackoff(1ms)
-          .NoJitter()
-          .Execute();
+        })
+            .MaxAttempts(3)
+            .WithExponentialBackoff(1ms)
+            .NoJitter()
+            .Execute();
     };
 
     auto result = SyncWait(test());
@@ -130,10 +132,11 @@ TEST(RetryTest, BackoffDoesNotBlockExecutor) {
                 co_return Err(make_error_code(Errc::IoError));
             }
             co_return Ok(42);
-        }).MaxAttempts(5)
-          .WithExponentialBackoff(50ms)
-          .NoJitter()
-          .Execute();
+        })
+            .MaxAttempts(5)
+            .WithExponentialBackoff(50ms)
+            .NoJitter()
+            .Execute();
     };
 
     // This task should run DURING the retry backoff delays
@@ -146,10 +149,9 @@ TEST(RetryTest, BackoffDoesNotBlockExecutor) {
     std::atomic<int> result{0};
 
     auto driver = [&]() -> Task<void> {
-        Spawn(executor, retrying_task())
-            .OnComplete([&](Result<int, std::error_code> v) {
-                if (v.IsOk()) result = v.Value();
-            });
+        Spawn(executor, retrying_task()).OnComplete([&](Result<int, std::error_code> v) {
+            if (v.IsOk()) result = v.Value();
+        });
         Spawn(executor, concurrent_task());
 
         co_await AsyncSleep(500ms);
@@ -162,9 +164,8 @@ TEST(RetryTest, BackoffDoesNotBlockExecutor) {
 
     EXPECT_EQ(result.load(), 42);
     EXPECT_EQ(attempts.load(), 3);
-    EXPECT_TRUE(other_task_ran.load())
-        << "Concurrent task did not run during retry backoff - "
-           "executor thread was likely blocked by sleep_for";
+    EXPECT_TRUE(other_task_ran.load()) << "Concurrent task did not run during retry backoff - "
+                                          "executor thread was likely blocked by sleep_for";
 }
 
 // ============================================================================
@@ -173,9 +174,9 @@ TEST(RetryTest, BackoffDoesNotBlockExecutor) {
 
 TEST(RetryTest, SingleAttemptSuccess) {
     auto test = []() -> Task<Result<int, std::error_code>> {
-        co_return co_await Retry([]() -> Task<Result<int, std::error_code>> {
-            co_return Ok(42);
-        }).MaxAttempts(1).Execute();
+        co_return co_await Retry([]() -> Task<Result<int, std::error_code>> { co_return Ok(42); })
+            .MaxAttempts(1)
+            .Execute();
     };
 
     auto result = SyncWait(test());
@@ -185,9 +186,10 @@ TEST(RetryTest, SingleAttemptSuccess) {
 
 TEST(RetryTest, SingleAttemptFails) {
     auto test = []() -> Task<Result<int, std::error_code>> {
-        co_return co_await Retry([]() -> Task<Result<int, std::error_code>> {
-            co_return Err(make_error_code(Errc::IoError));
-        }).MaxAttempts(1).Execute();
+        co_return co_await Retry(
+            []() -> Task<Result<int, std::error_code>> { co_return Err(make_error_code(Errc::IoError)); })
+            .MaxAttempts(1)
+            .Execute();
     };
 
     auto result = SyncWait(test());
@@ -203,11 +205,12 @@ TEST(RetryTest, MaxDelayRespected) {
                 co_return Err(make_error_code(Errc::IoError));
             }
             co_return Ok(42);
-        }).MaxAttempts(5)
-          .WithExponentialBackoff(1ms, 10.0)
-          .MaxDelay(5ms)
-          .NoJitter()
-          .Execute();
+        })
+            .MaxAttempts(5)
+            .WithExponentialBackoff(1ms, 10.0)
+            .MaxDelay(5ms)
+            .NoJitter()
+            .Execute();
     };
 
     auto start = std::chrono::steady_clock::now();

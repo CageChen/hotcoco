@@ -27,6 +27,10 @@
 
 #pragma once
 
+#include "hotcoco/core/error.hpp"
+#include "hotcoco/core/task.hpp"
+#include "hotcoco/io/executor.hpp"
+
 #include <coroutine>
 #include <cstdlib>
 #include <functional>
@@ -34,10 +38,6 @@
 #include <mutex>
 #include <optional>
 #include <system_error>
-
-#include "hotcoco/core/error.hpp"
-#include "hotcoco/core/task.hpp"
-#include "hotcoco/io/executor.hpp"
 
 namespace hotcoco {
 
@@ -131,10 +131,9 @@ struct SpawnState<void> {
 // ============================================================================
 template <typename T>
 class SpawnHandle {
-public:
-    explicit SpawnHandle(std::shared_ptr<SpawnState<T>> state)
-        : state_(std::move(state)) {}
-    
+   public:
+    explicit SpawnHandle(std::shared_ptr<SpawnState<T>> state) : state_(std::move(state)) {}
+
     // Register completion callback
     SpawnHandle& OnComplete(std::function<void(T)> callback) {
         if (state_) {
@@ -175,16 +174,15 @@ public:
         return *this;
     }
 
-private:
+   private:
     std::shared_ptr<SpawnState<T>> state_;
 };
 
 template <>
 class SpawnHandle<void> {
-public:
-    explicit SpawnHandle(std::shared_ptr<SpawnState<void>> state)
-        : state_(std::move(state)) {}
-    
+   public:
+    explicit SpawnHandle(std::shared_ptr<SpawnState<void>> state) : state_(std::move(state)) {}
+
     SpawnHandle& OnComplete(std::function<void()> callback) {
         if (state_) {
             bool already_done = false;
@@ -221,7 +219,7 @@ public:
         return *this;
     }
 
-private:
+   private:
     std::shared_ptr<SpawnState<void>> state_;
 };
 
@@ -230,18 +228,16 @@ private:
 // ============================================================================
 template <typename T>
 class SpawnedTask {
-public:
+   public:
     struct promise_type {
         std::shared_ptr<SpawnState<T>> state;
-        
+
         SpawnedTask get_return_object() {
-            return SpawnedTask{
-                std::coroutine_handle<promise_type>::from_promise(*this)
-            };
+            return SpawnedTask{std::coroutine_handle<promise_type>::from_promise(*this)};
         }
-        
+
         std::suspend_always initial_suspend() noexcept { return {}; }
-        
+
         auto final_suspend() noexcept {
             struct FinalAwaiter {
                 bool await_ready() noexcept { return false; }
@@ -253,7 +249,7 @@ public:
             };
             return FinalAwaiter{};
         }
-        
+
         void unhandled_exception() noexcept { std::abort(); }
 
         template <typename U>
@@ -263,15 +259,13 @@ public:
             }
         }
     };
-    
+
     using handle_type = std::coroutine_handle<promise_type>;
-    
+
     explicit SpawnedTask(handle_type h) : handle_(h) {}
-    
+
     // Move only
-    SpawnedTask(SpawnedTask&& other) noexcept : handle_(other.handle_) {
-        other.handle_ = nullptr;
-    }
+    SpawnedTask(SpawnedTask&& other) noexcept : handle_(other.handle_) { other.handle_ = nullptr; }
     SpawnedTask& operator=(SpawnedTask&& other) noexcept {
         if (this != &other) {
             // Started coroutines self-destruct via final_suspend;
@@ -300,38 +294,34 @@ public:
             handle_.promise().state = std::move(state);
         }
     }
-    
+
     handle_type GetHandle() const { return handle_; }
-    
-private:
+
+   private:
     handle_type handle_;
 };
 
 template <>
 class SpawnedTask<void> {
-public:
+   public:
     struct promise_type {
         std::shared_ptr<SpawnState<void>> state;
-        
+
         SpawnedTask get_return_object() {
-            return SpawnedTask{
-                std::coroutine_handle<promise_type>::from_promise(*this)
-            };
+            return SpawnedTask{std::coroutine_handle<promise_type>::from_promise(*this)};
         }
-        
+
         std::suspend_always initial_suspend() noexcept { return {}; }
-        
+
         auto final_suspend() noexcept {
             struct FinalAwaiter {
                 bool await_ready() noexcept { return false; }
-                void await_suspend(std::coroutine_handle<promise_type> h) noexcept {
-                    h.destroy();
-                }
+                void await_suspend(std::coroutine_handle<promise_type> h) noexcept { h.destroy(); }
                 void await_resume() noexcept {}
             };
             return FinalAwaiter{};
         }
-        
+
         void unhandled_exception() noexcept { std::abort(); }
 
         void return_void() {
@@ -340,14 +330,12 @@ public:
             }
         }
     };
-    
+
     using handle_type = std::coroutine_handle<promise_type>;
-    
+
     explicit SpawnedTask(handle_type h) : handle_(h) {}
-    
-    SpawnedTask(SpawnedTask&& other) noexcept : handle_(other.handle_) {
-        other.handle_ = nullptr;
-    }
+
+    SpawnedTask(SpawnedTask&& other) noexcept : handle_(other.handle_) { other.handle_ = nullptr; }
     SpawnedTask& operator=(SpawnedTask&& other) noexcept {
         if (this != &other) {
             if (handle_ && !handle_.done()) {
@@ -368,10 +356,10 @@ public:
             handle_.promise().state = std::move(state);
         }
     }
-    
+
     handle_type GetHandle() const { return handle_; }
-    
-private:
+
+   private:
     handle_type handle_;
 };
 
@@ -389,12 +377,12 @@ SpawnedTask<T> WrapForSpawn(Task<T> task) {
 template <typename T>
 SpawnHandle<T> Spawn(Executor& executor, Task<T> task) {
     auto state = std::make_shared<SpawnState<T>>();
-    
+
     auto spawned = WrapForSpawn(std::move(task));
     spawned.SetState(state);
-    
+
     executor.Schedule(spawned.GetHandle());
-    
+
     return SpawnHandle<T>(state);
 }
 

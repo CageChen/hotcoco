@@ -29,6 +29,8 @@
 
 #pragma once
 
+#include "hotcoco/core/task.hpp"
+
 #include <atomic>
 #include <coroutine>
 #include <cstdlib>
@@ -36,8 +38,6 @@
 #include <tuple>
 #include <utility>
 #include <vector>
-
-#include "hotcoco/core/task.hpp"
 
 namespace hotcoco {
 
@@ -52,9 +52,8 @@ namespace detail {
 // decrements the "+1". The last decrement (to 0) resumes the parent.
 //
 class WhenAllLatch {
-public:
-    explicit WhenAllLatch(size_t count) noexcept
-        : count_(count + 1) {}
+   public:
+    explicit WhenAllLatch(size_t count) noexcept : count_(count + 1) {}
 
     bool TryAwait(std::coroutine_handle<> awaiting) noexcept {
         awaiting_ = awaiting;
@@ -69,7 +68,7 @@ public:
         }
     }
 
-private:
+   private:
     std::atomic<size_t> count_;
     std::coroutine_handle<> awaiting_{nullptr};
 };
@@ -82,7 +81,7 @@ class WhenAllTask;
 
 template <typename T>
 class WhenAllTaskPromise {
-public:
+   public:
     WhenAllTask<T> get_return_object() noexcept;
 
     std::suspend_always initial_suspend() noexcept { return {}; }
@@ -90,10 +89,7 @@ public:
     auto final_suspend() noexcept {
         struct CompletionNotifier {
             bool await_ready() noexcept { return false; }
-            void await_suspend(
-                std::coroutine_handle<WhenAllTaskPromise> h) noexcept {
-                h.promise().latch_->Notify();
-            }
+            void await_suspend(std::coroutine_handle<WhenAllTaskPromise> h) noexcept { h.promise().latch_->Notify(); }
             void await_resume() noexcept {}
         };
         return CompletionNotifier{};
@@ -101,23 +97,21 @@ public:
 
     void unhandled_exception() noexcept { std::abort(); }
 
-    void return_value(T value) noexcept {
-        result_ = std::move(value);
-    }
+    void return_value(T value) noexcept { result_ = std::move(value); }
 
     T& Result() & noexcept { return result_.value(); }
     T&& Result() && noexcept { return std::move(result_.value()); }
 
     void SetLatch(WhenAllLatch* latch) noexcept { latch_ = latch; }
 
-private:
+   private:
     WhenAllLatch* latch_ = nullptr;
     std::optional<T> result_;
 };
 
 template <>
 class WhenAllTaskPromise<void> {
-public:
+   public:
     WhenAllTask<void> get_return_object() noexcept;
 
     std::suspend_always initial_suspend() noexcept { return {}; }
@@ -125,10 +119,7 @@ public:
     auto final_suspend() noexcept {
         struct CompletionNotifier {
             bool await_ready() noexcept { return false; }
-            void await_suspend(
-                std::coroutine_handle<WhenAllTaskPromise> h) noexcept {
-                h.promise().latch_->Notify();
-            }
+            void await_suspend(std::coroutine_handle<WhenAllTaskPromise> h) noexcept { h.promise().latch_->Notify(); }
             void await_resume() noexcept {}
         };
         return CompletionNotifier{};
@@ -142,13 +133,13 @@ public:
 
     void SetLatch(WhenAllLatch* latch) noexcept { latch_ = latch; }
 
-private:
+   private:
     WhenAllLatch* latch_ = nullptr;
 };
 
 template <typename T>
 class WhenAllTask {
-public:
+   public:
     using promise_type = WhenAllTaskPromise<T>;
     using Handle = std::coroutine_handle<promise_type>;
 
@@ -160,8 +151,7 @@ public:
         }
     }
 
-    WhenAllTask(WhenAllTask&& other) noexcept
-        : handle_(std::exchange(other.handle_, nullptr)) {}
+    WhenAllTask(WhenAllTask&& other) noexcept : handle_(std::exchange(other.handle_, nullptr)) {}
     WhenAllTask& operator=(WhenAllTask&& other) noexcept {
         if (this != &other) {
             if (handle_) handle_.destroy();
@@ -177,15 +167,11 @@ public:
         handle_.resume();
     }
 
-    decltype(auto) Result() & {
-        return handle_.promise().Result();
-    }
+    decltype(auto) Result() & { return handle_.promise().Result(); }
 
-    decltype(auto) Result() && {
-        return std::move(handle_.promise()).Result();
-    }
+    decltype(auto) Result() && { return std::move(handle_.promise()).Result(); }
 
-private:
+   private:
     Handle handle_;
 };
 
@@ -213,10 +199,9 @@ inline WhenAllTask<void> MakeWhenAllTask(Task<void> task) {
 // ============================================================================
 template <typename... Ts>
 class WhenAllTupleAwaitable {
-public:
+   public:
     explicit WhenAllTupleAwaitable(Task<Ts>... tasks)
-        : tasks_(MakeWhenAllTask(std::move(tasks))...),
-          latch_(sizeof...(Ts)) {}
+        : tasks_(MakeWhenAllTask(std::move(tasks))...), latch_(sizeof...(Ts)) {}
 
     bool await_ready() noexcept { return sizeof...(Ts) == 0; }
 
@@ -225,11 +210,9 @@ public:
         return latch_.TryAwait(awaiting);
     }
 
-    std::tuple<Ts...> await_resume() {
-        return GetResults(std::index_sequence_for<Ts...>{});
-    }
+    std::tuple<Ts...> await_resume() { return GetResults(std::index_sequence_for<Ts...>{}); }
 
-private:
+   private:
     template <size_t... Is>
     void StartAll(std::index_sequence<Is...>) {
         (std::get<Is>(tasks_).Start(latch_), ...);
@@ -237,8 +220,7 @@ private:
 
     template <size_t... Is>
     std::tuple<Ts...> GetResults(std::index_sequence<Is...>) {
-        return std::tuple<Ts...>{
-            std::move(std::get<Is>(tasks_)).Result()...};
+        return std::tuple<Ts...>{std::move(std::get<Is>(tasks_)).Result()...};
     }
 
     std::tuple<WhenAllTask<Ts>...> tasks_;
@@ -250,9 +232,8 @@ private:
 // ============================================================================
 template <typename T>
 class WhenAllVectorAwaitable {
-public:
-    explicit WhenAllVectorAwaitable(std::vector<Task<T>> tasks)
-        : latch_(tasks.size()) {
+   public:
+    explicit WhenAllVectorAwaitable(std::vector<Task<T>> tasks) : latch_(tasks.size()) {
         tasks_.reserve(tasks.size());
         for (auto& t : tasks) {
             tasks_.push_back(MakeWhenAllTask(std::move(t)));
@@ -277,7 +258,7 @@ public:
         return results;
     }
 
-private:
+   private:
     std::vector<WhenAllTask<T>> tasks_;
     WhenAllLatch latch_;
 };
@@ -285,9 +266,8 @@ private:
 // Specialization for void tasks (vector)
 template <>
 class WhenAllVectorAwaitable<void> {
-public:
-    explicit WhenAllVectorAwaitable(std::vector<Task<void>> tasks)
-        : latch_(tasks.size()) {
+   public:
+    explicit WhenAllVectorAwaitable(std::vector<Task<void>> tasks) : latch_(tasks.size()) {
         tasks_.reserve(tasks.size());
         for (auto& t : tasks) {
             tasks_.push_back(MakeWhenAllTask(std::move(t)));
@@ -309,7 +289,7 @@ public:
         }
     }
 
-private:
+   private:
     std::vector<WhenAllTask<void>> tasks_;
     WhenAllLatch latch_;
 };
@@ -323,8 +303,7 @@ private:
 // Variadic version: WhenAll(Task<A>, Task<B>, Task<C>) -> Task<tuple<A,B,C>>
 template <typename... Ts>
 Task<std::tuple<Ts...>> WhenAll(Task<Ts>... tasks) {
-    co_return co_await detail::WhenAllTupleAwaitable<Ts...>(
-        std::move(tasks)...);
+    co_return co_await detail::WhenAllTupleAwaitable<Ts...>(std::move(tasks)...);
 }
 
 // Vector version: WhenAll(vector<Task<T>>) -> Task<vector<T>>

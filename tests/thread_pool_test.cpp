@@ -2,21 +2,20 @@
 // Thread Pool Executor Tests
 // ============================================================================
 
-#include <gtest/gtest.h>
-
-#include <atomic>
-#include <chrono>
-#include <set>
-#include <thread>
-#include <mutex>
-
+#include "hotcoco/core/error.hpp"
+#include "hotcoco/core/result.hpp"
 #include "hotcoco/core/task.hpp"
 #include "hotcoco/core/when_all.hpp"
 #include "hotcoco/core/when_any.hpp"
-#include "hotcoco/core/error.hpp"
-#include "hotcoco/core/result.hpp"
 #include "hotcoco/io/thread_pool_executor.hpp"
 #include "hotcoco/sync/sync_wait.hpp"
+
+#include <atomic>
+#include <chrono>
+#include <gtest/gtest.h>
+#include <mutex>
+#include <set>
+#include <thread>
 
 using namespace hotcoco;
 using namespace std::chrono_literals;
@@ -51,17 +50,17 @@ TEST(ThreadPoolTest, ScheduleCallback) {
 TEST(ThreadPoolTest, ScheduleCoroutine) {
     ThreadPoolExecutor executor(2);
     std::atomic<int> value{0};
-    
+
     auto task = [&]() -> Task<void> {
         value = 42;
         executor.Stop();
         co_return;
     };
-    
+
     auto t = task();
     executor.Schedule(t.GetHandle());
     executor.Run();
-    
+
     EXPECT_EQ(value.load(), 42);
 }
 
@@ -77,9 +76,9 @@ TEST(ThreadPoolTest, MultipleTasks) {
             }
         });
     }
-    
+
     executor.Run();
-    
+
     EXPECT_EQ(counter.load(), num_tasks);
 }
 
@@ -89,7 +88,7 @@ TEST(ThreadPoolTest, ParallelExecution) {
     std::set<std::thread::id> thread_ids;
     const int num_tasks = 20;
     std::atomic<int> completed{0};
-    
+
     for (int i = 0; i < num_tasks; ++i) {
         executor.Post([&]() {
             // Record thread ID
@@ -97,18 +96,18 @@ TEST(ThreadPoolTest, ParallelExecution) {
                 std::lock_guard<std::mutex> lock(mutex);
                 thread_ids.insert(std::this_thread::get_id());
             }
-            
+
             // Simulate some work
             std::this_thread::sleep_for(10ms);
-            
+
             if (++completed == num_tasks) {
                 executor.Stop();
             }
         });
     }
-    
+
     executor.Run();
-    
+
     // Should have used multiple threads
     EXPECT_GT(thread_ids.size(), 1u);
 }
@@ -117,18 +116,18 @@ TEST(ThreadPoolTest, ScheduleAfterDelay) {
     ThreadPoolExecutor executor(2);
     auto start = std::chrono::steady_clock::now();
     std::atomic<bool> executed{false};
-    
+
     // Post a callback that waits, simulating delayed execution
     executor.Post([&]() {
         std::this_thread::sleep_for(50ms);
         executed = true;
         executor.Stop();
     });
-    
+
     executor.Run();
-    
+
     auto elapsed = std::chrono::steady_clock::now() - start;
-    
+
     EXPECT_TRUE(executed.load());
     EXPECT_GE(elapsed, 50ms);
 }
@@ -150,12 +149,10 @@ Task<std::string> ToString(int x) {
 }
 
 TEST(WhenAllTest, TwoTasks) {
-    auto combined = []() -> Task<std::tuple<int, int>> {
-        co_return co_await WhenAll(AddOne(1), Double(5));
-    };
-    
+    auto combined = []() -> Task<std::tuple<int, int>> { co_return co_await WhenAll(AddOne(1), Double(5)); };
+
     auto result = SyncWait(combined());
-    
+
     EXPECT_EQ(std::get<0>(result), 2);   // 1 + 1
     EXPECT_EQ(std::get<1>(result), 10);  // 5 * 2
 }
@@ -164,9 +161,9 @@ TEST(WhenAllTest, ThreeTasks) {
     auto combined = []() -> Task<std::tuple<int, int, int>> {
         co_return co_await WhenAll(AddOne(10), Double(20), AddOne(100));
     };
-    
+
     auto result = SyncWait(combined());
-    
+
     EXPECT_EQ(std::get<0>(result), 11);   // 10 + 1
     EXPECT_EQ(std::get<1>(result), 40);   // 20 * 2
     EXPECT_EQ(std::get<2>(result), 101);  // 100 + 1
@@ -180,9 +177,9 @@ TEST(WhenAllTest, VectorVersion) {
         tasks.push_back(AddOne(3));
         co_return co_await WhenAll(std::move(tasks));
     };
-    
+
     auto results = SyncWait(combined());
-    
+
     ASSERT_EQ(results.size(), 3u);
     EXPECT_EQ(results[0], 2);
     EXPECT_EQ(results[1], 3);
@@ -267,9 +264,7 @@ TEST(ThreadPoolTest, PostCallback) {
     ThreadPoolExecutor executor(2);
     std::atomic<bool> called{false};
 
-    executor.Post([&]() {
-        called = true;
-    });
+    executor.Post([&]() { called = true; });
 
     std::this_thread::sleep_for(50ms);
     executor.Stop();
@@ -282,9 +277,7 @@ TEST(ThreadPoolTest, MultiplePostCallbacks) {
     std::atomic<int> count{0};
 
     for (int i = 0; i < 100; ++i) {
-        executor.Post([&]() {
-            count.fetch_add(1);
-        });
+        executor.Post([&]() { count.fetch_add(1); });
     }
 
     std::this_thread::sleep_for(200ms);

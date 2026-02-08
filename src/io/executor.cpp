@@ -17,8 +17,7 @@ void SetCurrentExecutor(Executor* executor) {
     g_current_executor = executor;
 }
 
-ExecutorGuard::ExecutorGuard(Executor* executor)
-    : previous_(g_current_executor) {
+ExecutorGuard::ExecutorGuard(Executor* executor) : previous_(g_current_executor) {
     g_current_executor = executor;
 }
 

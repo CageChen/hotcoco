@@ -4,12 +4,12 @@
 
 #include "hotcoco/io/sync_tcp.hpp"
 
-#include <arpa/inet.h>
-#include <netdb.h>
 #include <sys/socket.h>
-#include <unistd.h>
 
+#include <arpa/inet.h>
 #include <cstring>
+#include <netdb.h>
+#include <unistd.h>
 
 namespace hotcoco {
 
@@ -34,8 +34,7 @@ SyncTcpStream& SyncTcpStream::operator=(SyncTcpStream&& other) noexcept {
     return *this;
 }
 
-Result<std::unique_ptr<SyncTcpStream>, std::error_code> SyncTcpStream::Connect(
-    const std::string& host, uint16_t port) {
+Result<std::unique_ptr<SyncTcpStream>, std::error_code> SyncTcpStream::Connect(const std::string& host, uint16_t port) {
     int sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (sockfd < 0) {
         return Err(make_error_code(Errc::SocketCreateFailed));
@@ -147,8 +146,7 @@ SyncTcpListener::~SyncTcpListener() {
     }
 }
 
-SyncTcpListener::SyncTcpListener(SyncTcpListener&& other) noexcept
-    : fd_(other.fd_), port_(other.port_) {
+SyncTcpListener::SyncTcpListener(SyncTcpListener&& other) noexcept : fd_(other.fd_), port_(other.port_) {
     other.fd_ = -1;
     other.port_ = 0;
 }
@@ -166,8 +164,8 @@ SyncTcpListener& SyncTcpListener::operator=(SyncTcpListener&& other) noexcept {
     return *this;
 }
 
-Result<std::unique_ptr<SyncTcpListener>, std::error_code> SyncTcpListener::Listen(
-    const std::string& host, uint16_t port, int backlog) {
+Result<std::unique_ptr<SyncTcpListener>, std::error_code> SyncTcpListener::Listen(const std::string& host,
+                                                                                  uint16_t port, int backlog) {
     int sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (sockfd < 0) {
         return Err(make_error_code(Errc::SocketCreateFailed));

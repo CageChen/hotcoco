@@ -2,14 +2,14 @@
 // AsyncEvent Tests
 // ============================================================================
 
-#include <gtest/gtest.h>
-
-#include <atomic>
-#include <thread>
+#include "hotcoco/sync/event.hpp"
 
 #include "hotcoco/core/task.hpp"
-#include "hotcoco/sync/event.hpp"
 #include "hotcoco/sync/sync_wait.hpp"
+
+#include <atomic>
+#include <gtest/gtest.h>
+#include <thread>
 
 using namespace hotcoco;
 

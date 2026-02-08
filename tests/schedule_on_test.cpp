@@ -2,18 +2,18 @@
 // ScheduleOn / Yield Tests
 // ============================================================================
 
-#include <gtest/gtest.h>
-
-#include <atomic>
-#include <thread>
-#include <vector>
-
 #include "hotcoco/core/schedule_on.hpp"
+
 #include "hotcoco/core/spawn.hpp"
 #include "hotcoco/core/task.hpp"
 #include "hotcoco/io/libuv_executor.hpp"
 #include "hotcoco/io/timer.hpp"
 #include "hotcoco/sync/sync_wait.hpp"
+
+#include <atomic>
+#include <gtest/gtest.h>
+#include <thread>
+#include <vector>
 
 using namespace hotcoco;
 using namespace std::chrono_literals;
@@ -69,11 +69,11 @@ TEST(YieldTest, MultipleYields) {
     int counter = 0;
 
     auto task = [&]() -> Task<void> {
-        counter++;        // 1
+        counter++;  // 1
         co_await Yield();
-        counter++;        // 2
+        counter++;  // 2
         co_await Yield();
-        counter++;        // 3
+        counter++;  // 3
         executor.Stop();
     };
 
@@ -128,9 +128,7 @@ TEST(ScheduleOnTest, TransferBetweenExecutors) {
     Spawn(executor1, task());
 
     // Run executor2 on a separate thread
-    std::thread t2([&]() {
-        executor2.Run();
-    });
+    std::thread t2([&]() { executor2.Run(); });
 
     // Run executor1 on this thread — it will start the task,
     // which transfers to executor2
@@ -176,9 +174,7 @@ TEST(ScheduleOnTest, RoundTrip) {
 
     Spawn(executor1, task());
 
-    std::thread t2([&]() {
-        executor2.Run();
-    });
+    std::thread t2([&]() { executor2.Run(); });
 
     // Keep executor2 alive with a driver
     auto driver2 = [&]() -> Task<void> {

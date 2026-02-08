@@ -24,7 +24,9 @@
 
 #pragma once
 
-#include <uv.h>
+#include "hotcoco/core/error.hpp"
+#include "hotcoco/core/result.hpp"
+#include "hotcoco/io/executor.hpp"
 
 #include <atomic>
 #include <chrono>
@@ -32,11 +34,8 @@
 #include <memory>
 #include <mutex>
 #include <queue>
+#include <uv.h>
 #include <vector>
-
-#include "hotcoco/core/error.hpp"
-#include "hotcoco/core/result.hpp"
-#include "hotcoco/io/executor.hpp"
 
 namespace hotcoco {
 
@@ -44,7 +43,7 @@ namespace hotcoco {
 // LibuvExecutor - libuv-based Executor Implementation
 // ============================================================================
 class LibuvExecutor : public Executor {
-public:
+   public:
     // Factory method — returns an error if libuv initialization fails.
     static Result<std::unique_ptr<LibuvExecutor>, std::error_code> Create();
 
@@ -64,14 +63,13 @@ public:
     bool IsRunning() const override;
 
     void Schedule(std::coroutine_handle<> handle) override;
-    void ScheduleAfter(std::chrono::milliseconds delay,
-                       std::coroutine_handle<> handle) override;
+    void ScheduleAfter(std::chrono::milliseconds delay, std::coroutine_handle<> handle) override;
     void Post(std::function<void()> callback) override;
 
     // Access the underlying libuv loop (for TCP, etc.)
     uv_loop_t* GetLoop() { return &loop_; }
 
-private:
+   private:
     // Private constructor — use Create() factory method
     LibuvExecutor();
 
@@ -100,8 +98,8 @@ private:
     // State
     // ========================================================================
     uv_loop_t loop_;
-    uv_async_t async_;          // For cross-thread scheduling
-    uv_idle_t idle_;            // For processing ready queue
+    uv_async_t async_;  // For cross-thread scheduling
+    uv_idle_t idle_;    // For processing ready queue
     std::atomic<bool> running_{false};
     bool idle_active_ = false;
 

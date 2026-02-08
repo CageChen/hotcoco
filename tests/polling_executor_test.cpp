@@ -2,16 +2,16 @@
 // PollingExecutor Unit Tests
 // ============================================================================
 
-#include <gtest/gtest.h>
-
-#include <atomic>
-#include <chrono>
-#include <thread>
+#include "hotcoco/io/polling_executor.hpp"
 
 #include "hotcoco/core/result.hpp"
 #include "hotcoco/core/task.hpp"
-#include "hotcoco/io/polling_executor.hpp"
 #include "hotcoco/io/timer.hpp"
+
+#include <atomic>
+#include <chrono>
+#include <gtest/gtest.h>
+#include <thread>
 
 using namespace hotcoco;
 using namespace std::chrono_literals;
@@ -21,7 +21,7 @@ using namespace std::chrono_literals;
 // ============================================================================
 
 class MockCompletionSource : public CompletionSource {
-public:
+   public:
     // Queue handles to be returned by Poll()
     void QueueHandle(std::coroutine_handle<> h) {
         std::lock_guard<std::mutex> lock(mutex_);
@@ -38,7 +38,7 @@ public:
         return count;
     }
 
-private:
+   private:
     std::mutex mutex_;
     std::queue<std::coroutine_handle<>> pending_;
 };
@@ -351,9 +351,7 @@ TEST(PollingExecutorTest, SleepIdleStrategy) {
     ASSERT_TRUE(executor_result.IsOk());
     auto& executor = *executor_result.Value();
 
-    executor.Post([&]() {
-        executor.Stop();
-    });
+    executor.Post([&]() { executor.Stop(); });
 
     executor.Run();
     // Just verify it doesn't hang

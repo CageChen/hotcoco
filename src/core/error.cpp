@@ -11,7 +11,7 @@ namespace hotcoco {
 namespace {
 
 class HotcocoCategoryImpl : public std::error_category {
-public:
+   public:
     const char* name() const noexcept override { return "hotcoco"; }
 
     std::string message(int ev) const override {

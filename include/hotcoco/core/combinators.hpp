@@ -24,10 +24,10 @@
 
 #pragma once
 
+#include "hotcoco/core/task.hpp"
+
 #include <coroutine>
 #include <type_traits>
-
-#include "hotcoco/core/task.hpp"
 
 namespace hotcoco {
 
@@ -49,10 +49,10 @@ template <typename T, typename F>
     requires std::invocable<F, T>
 Task<std::invoke_result_t<F, T>> Then(Task<T> task, F func) {
     using ResultT = std::invoke_result_t<F, T>;
-    
+
     // Await the input task
     T value = co_await std::move(task);
-    
+
     // Apply the transformation
     if constexpr (std::is_void_v<ResultT>) {
         func(std::move(value));
@@ -67,10 +67,10 @@ template <typename F>
     requires std::invocable<F>
 Task<std::invoke_result_t<F>> Then(Task<void> task, F func) {
     using ResultT = std::invoke_result_t<F>;
-    
+
     // Await the input task
     co_await std::move(task);
-    
+
     // Apply the transformation
     if constexpr (std::is_void_v<ResultT>) {
         func();

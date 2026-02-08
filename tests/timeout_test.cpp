@@ -2,12 +2,13 @@
 // Timeout Tests
 // ============================================================================
 
-#include <gtest/gtest.h>
+#include "hotcoco/core/timeout.hpp"
 
 #include "hotcoco/core/task.hpp"
-#include "hotcoco/core/timeout.hpp"
 #include "hotcoco/io/libuv_executor.hpp"
 #include "hotcoco/sync/sync_wait.hpp"
+
+#include <gtest/gtest.h>
 
 using namespace hotcoco;
 using namespace std::chrono_literals;
@@ -26,9 +27,7 @@ TEST(TimeoutTest, TaskCompletesBeforeTimeout) {
         // Use a short timeout so the timer child inside WithTimeout's
         // DetachedTask controller finishes quickly after the user task wins.
         // This avoids leaking coroutine frames when the executor stops.
-        auto result = co_await WithTimeout(
-            []() -> Task<int> { co_return 42; }(),
-            10ms);
+        auto result = co_await WithTimeout([]() -> Task<int> { co_return 42; }(), 10ms);
 
         EXPECT_TRUE(result.IsOk());
         EXPECT_EQ(result.Value(), 42);
@@ -53,9 +52,7 @@ TEST(TimeoutTest, VoidTaskCompletesBeforeTimeout) {
 
         // Use a short timeout so the timer child inside WithTimeout's
         // DetachedTask controller finishes quickly after the user task wins.
-        auto result = co_await WithTimeout(
-            []() -> Task<void> { co_return; }(),
-            10ms);
+        auto result = co_await WithTimeout([]() -> Task<void> { co_return; }(), 10ms);
 
         EXPECT_TRUE(result.IsOk());
 

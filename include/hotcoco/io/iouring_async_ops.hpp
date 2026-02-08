@@ -25,14 +25,14 @@
 
 #ifdef HOTCOCO_HAS_IOURING
 
-#include <liburing.h>
+#include "hotcoco/io/executor.hpp"
+#include "hotcoco/io/iouring_executor.hpp"
+
 #include <sys/socket.h>
 
 #include <coroutine>
 #include <cstdint>
-
-#include "hotcoco/io/executor.hpp"
-#include "hotcoco/io/iouring_executor.hpp"
+#include <liburing.h>
 
 namespace hotcoco {
 
@@ -40,9 +40,8 @@ namespace hotcoco {
 // IoUringAcceptAwaitable
 // ============================================================================
 class IoUringAcceptAwaitable {
-public:
-    IoUringAcceptAwaitable(int listen_fd, struct sockaddr* addr,
-                           socklen_t* addrlen, int flags)
+   public:
+    IoUringAcceptAwaitable(int listen_fd, struct sockaddr* addr, socklen_t* addrlen, int flags)
         : listen_fd_(listen_fd), addr_(addr), addrlen_(addrlen), flags_(flags) {}
 
     // Non-copyable, non-movable (OpContext address submitted to kernel)
@@ -67,8 +66,7 @@ public:
             return false;
         }
 
-        io_uring_prep_accept(sqe, listen_fd_, addr_, addrlen_,
-                             flags_ | SOCK_CLOEXEC | SOCK_NONBLOCK);
+        io_uring_prep_accept(sqe, listen_fd_, addr_, addrlen_, flags_ | SOCK_CLOEXEC | SOCK_NONBLOCK);
         io_uring_sqe_set_data(sqe, &ctx_);
         io_uring_submit(executor->GetRing());
         return true;
@@ -76,7 +74,7 @@ public:
 
     int32_t await_resume() const noexcept { return ctx_.result; }
 
-private:
+   private:
     int listen_fd_;
     struct sockaddr* addr_;
     socklen_t* addrlen_;
@@ -84,10 +82,8 @@ private:
     IoUringExecutor::OpContext ctx_{IoUringExecutor::OpType::IO, nullptr, 0, {}};
 };
 
-inline IoUringAcceptAwaitable IoUringAccept(int listen_fd,
-                                            struct sockaddr* addr = nullptr,
-                                            socklen_t* addrlen = nullptr,
-                                            int flags = 0) {
+inline IoUringAcceptAwaitable IoUringAccept(int listen_fd, struct sockaddr* addr = nullptr,
+                                            socklen_t* addrlen = nullptr, int flags = 0) {
     return IoUringAcceptAwaitable(listen_fd, addr, addrlen, flags);
 }
 
@@ -95,7 +91,7 @@ inline IoUringAcceptAwaitable IoUringAccept(int listen_fd,
 // IoUringConnectAwaitable
 // ============================================================================
 class IoUringConnectAwaitable {
-public:
+   public:
     IoUringConnectAwaitable(int fd, const struct sockaddr* addr, socklen_t addrlen)
         : fd_(fd), addr_(addr), addrlen_(addrlen) {}
 
@@ -129,16 +125,14 @@ public:
 
     int32_t await_resume() const noexcept { return ctx_.result; }
 
-private:
+   private:
     int fd_;
     const struct sockaddr* addr_;
     socklen_t addrlen_;
     IoUringExecutor::OpContext ctx_{IoUringExecutor::OpType::IO, nullptr, 0, {}};
 };
 
-inline IoUringConnectAwaitable IoUringConnect(int fd,
-                                              const struct sockaddr* addr,
-                                              socklen_t addrlen) {
+inline IoUringConnectAwaitable IoUringConnect(int fd, const struct sockaddr* addr, socklen_t addrlen) {
     return IoUringConnectAwaitable(fd, addr, addrlen);
 }
 
@@ -146,9 +140,8 @@ inline IoUringConnectAwaitable IoUringConnect(int fd,
 // IoUringRecvAwaitable
 // ============================================================================
 class IoUringRecvAwaitable {
-public:
-    IoUringRecvAwaitable(int fd, void* buf, size_t len, int flags)
-        : fd_(fd), buf_(buf), len_(len), flags_(flags) {}
+   public:
+    IoUringRecvAwaitable(int fd, void* buf, size_t len, int flags) : fd_(fd), buf_(buf), len_(len), flags_(flags) {}
 
     // Non-copyable, non-movable (OpContext address submitted to kernel)
     IoUringRecvAwaitable(const IoUringRecvAwaitable&) = delete;
@@ -180,7 +173,7 @@ public:
 
     int32_t await_resume() const noexcept { return ctx_.result; }
 
-private:
+   private:
     int fd_;
     void* buf_;
     size_t len_;
@@ -188,8 +181,7 @@ private:
     IoUringExecutor::OpContext ctx_{IoUringExecutor::OpType::IO, nullptr, 0, {}};
 };
 
-inline IoUringRecvAwaitable IoUringRecv(int fd, void* buf, size_t len,
-                                        int flags = 0) {
+inline IoUringRecvAwaitable IoUringRecv(int fd, void* buf, size_t len, int flags = 0) {
     return IoUringRecvAwaitable(fd, buf, len, flags);
 }
 
@@ -197,7 +189,7 @@ inline IoUringRecvAwaitable IoUringRecv(int fd, void* buf, size_t len,
 // IoUringSendAwaitable
 // ============================================================================
 class IoUringSendAwaitable {
-public:
+   public:
     IoUringSendAwaitable(int fd, const void* buf, size_t len, int flags)
         : fd_(fd), buf_(buf), len_(len), flags_(flags) {}
 
@@ -231,7 +223,7 @@ public:
 
     int32_t await_resume() const noexcept { return ctx_.result; }
 
-private:
+   private:
     int fd_;
     const void* buf_;
     size_t len_;
@@ -239,8 +231,7 @@ private:
     IoUringExecutor::OpContext ctx_{IoUringExecutor::OpType::IO, nullptr, 0, {}};
 };
 
-inline IoUringSendAwaitable IoUringSend(int fd, const void* buf, size_t len,
-                                        int flags = MSG_NOSIGNAL) {
+inline IoUringSendAwaitable IoUringSend(int fd, const void* buf, size_t len, int flags = MSG_NOSIGNAL) {
     return IoUringSendAwaitable(fd, buf, len, flags);
 }
 

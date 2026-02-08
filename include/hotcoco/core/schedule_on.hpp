@@ -27,9 +27,9 @@
 
 #pragma once
 
-#include <coroutine>
-
 #include "hotcoco/io/executor.hpp"
+
+#include <coroutine>
 
 namespace hotcoco {
 
@@ -41,7 +41,7 @@ namespace hotcoco {
 // Requires a current executor to be set (via ExecutorGuard or Run()).
 //
 class YieldAwaitable {
-public:
+   public:
     bool await_ready() const noexcept { return false; }
 
     bool await_suspend(std::coroutine_handle<> handle) const {
@@ -70,18 +70,16 @@ inline YieldAwaitable Yield() {
 // (assuming the target executor sets itself via ExecutorGuard in Run()).
 //
 class ScheduleOnAwaitable {
-public:
+   public:
     explicit ScheduleOnAwaitable(Executor& target) : target_(target) {}
 
     bool await_ready() const noexcept { return false; }
 
-    void await_suspend(std::coroutine_handle<> handle) const {
-        target_.Schedule(handle);
-    }
+    void await_suspend(std::coroutine_handle<> handle) const { target_.Schedule(handle); }
 
     void await_resume() const noexcept {}
 
-private:
+   private:
     Executor& target_;
 };
 

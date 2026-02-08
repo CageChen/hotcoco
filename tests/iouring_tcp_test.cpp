@@ -12,22 +12,22 @@
 
 #ifdef HOTCOCO_HAS_IOURING
 
-#include <gtest/gtest.h>
-
-#include <arpa/inet.h>
-#include <netinet/in.h>
-#include <sys/socket.h>
-#include <unistd.h>
-
-#include <cstring>
-#include <string>
-#include <vector>
+#include "hotcoco/io/iouring_tcp.hpp"
 
 #include "hotcoco/core/task.hpp"
 #include "hotcoco/io/iouring_async_ops.hpp"
 #include "hotcoco/io/iouring_executor.hpp"
-#include "hotcoco/io/iouring_tcp.hpp"
 #include "hotcoco/io/timer.hpp"
+
+#include <sys/socket.h>
+
+#include <arpa/inet.h>
+#include <cstring>
+#include <gtest/gtest.h>
+#include <netinet/in.h>
+#include <string>
+#include <unistd.h>
+#include <vector>
 
 using namespace hotcoco;
 using namespace std::chrono_literals;
@@ -78,9 +78,7 @@ TEST(IoUringAsyncOpsTest, AcceptAndConnect) {
     int connect_result = -1;
 
     // Server side: accept
-    auto server_task = [&]() -> Task<void> {
-        accepted_fd = co_await IoUringAccept(listen_fd, nullptr, nullptr, 0);
-    };
+    auto server_task = [&]() -> Task<void> { accepted_fd = co_await IoUringAccept(listen_fd, nullptr, nullptr, 0); };
 
     // Client side: connect (small delay to let accept be submitted first)
     auto client_task = [&]() -> Task<void> {
@@ -93,8 +91,7 @@ TEST(IoUringAsyncOpsTest, AcceptAndConnect) {
         addr.sin_port = htons(port);
         addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
 
-        connect_result = co_await IoUringConnect(
-            cfd, reinterpret_cast<const struct sockaddr*>(&addr), sizeof(addr));
+        connect_result = co_await IoUringConnect(cfd, reinterpret_cast<const struct sockaddr*>(&addr), sizeof(addr));
 
         close(cfd);
 
@@ -155,16 +152,14 @@ TEST(IoUringAsyncOpsTest, SendRecv) {
         addr.sin_port = htons(port);
         addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
 
-        int r = co_await IoUringConnect(
-            cfd, reinterpret_cast<const struct sockaddr*>(&addr), sizeof(addr));
+        int r = co_await IoUringConnect(cfd, reinterpret_cast<const struct sockaddr*>(&addr), sizeof(addr));
         if (r < 0) {
             close(cfd);
             executor.Stop();
             co_return;
         }
 
-        sent_bytes = co_await IoUringSend(
-            cfd, test_data.data(), test_data.size(), MSG_NOSIGNAL);
+        sent_bytes = co_await IoUringSend(cfd, test_data.data(), test_data.size(), MSG_NOSIGNAL);
 
         close(cfd);
         co_await AsyncSleep(50ms);
@@ -222,9 +217,11 @@ TEST(IoUringAsyncOpsTest, RecvEOF) {
         addr.sin_port = htons(port);
         addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
 
-        int r = co_await IoUringConnect(
-            cfd, reinterpret_cast<const struct sockaddr*>(&addr), sizeof(addr));
-        if (r < 0) { close(cfd); co_return; }
+        int r = co_await IoUringConnect(cfd, reinterpret_cast<const struct sockaddr*>(&addr), sizeof(addr));
+        if (r < 0) {
+            close(cfd);
+            co_return;
+        }
 
         // Close immediately to trigger EOF on server
         close(cfd);
@@ -256,8 +253,7 @@ TEST(IoUringAsyncOpsTest, ConnectRefused) {
         addr.sin_port = htons(1);  // Privileged port, likely refused
         addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
 
-        connect_result = co_await IoUringConnect(
-            cfd, reinterpret_cast<const struct sockaddr*>(&addr), sizeof(addr));
+        connect_result = co_await IoUringConnect(cfd, reinterpret_cast<const struct sockaddr*>(&addr), sizeof(addr));
 
         close(cfd);
         executor.Stop();

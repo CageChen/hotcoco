@@ -2,15 +2,15 @@
 // Spawn Tests
 // ============================================================================
 
-#include <gtest/gtest.h>
+#include "hotcoco/core/spawn.hpp"
+
+#include "hotcoco/core/task.hpp"
+#include "hotcoco/io/thread_pool_executor.hpp"
 
 #include <atomic>
 #include <chrono>
+#include <gtest/gtest.h>
 #include <thread>
-
-#include "hotcoco/core/spawn.hpp"
-#include "hotcoco/core/task.hpp"
-#include "hotcoco/io/thread_pool_executor.hpp"
 
 using namespace hotcoco;
 using namespace std::chrono_literals;
@@ -31,28 +31,25 @@ Task<void> SetFlag(std::atomic<bool>& flag) {
 TEST(SpawnTest, BasicSpawn) {
     std::atomic<bool> completed{false};
     ThreadPoolExecutor executor(2);
-    
+
     Spawn(executor, SetFlag(completed));
-    
+
     // Give it time to complete
     std::this_thread::sleep_for(50ms);
     executor.Stop();
-    
+
     EXPECT_TRUE(completed.load());
 }
 
 TEST(SpawnTest, SpawnWithResult) {
     std::atomic<int> result{0};
     ThreadPoolExecutor executor(2);
-    
-    Spawn(executor, ComputeValue(21))
-        .OnComplete([&result](int value) {
-            result = value;
-        });
-    
+
+    Spawn(executor, ComputeValue(21)).OnComplete([&result](int value) { result = value; });
+
     std::this_thread::sleep_for(50ms);
     executor.Stop();
-    
+
     EXPECT_EQ(result.load(), 42);
 }
 
@@ -93,19 +90,17 @@ TEST(SpawnTest, OnCompleteRaceCondition) {
         ThreadPoolExecutor executor(4);
 
         // Spawn a fast task — it may complete before OnComplete is registered
-        Spawn(executor, ComputeValue(21))
-            .OnComplete([&call_count](int value) {
-                EXPECT_EQ(value, 42);
-                call_count++;
-            });
+        Spawn(executor, ComputeValue(21)).OnComplete([&call_count](int value) {
+            EXPECT_EQ(value, 42);
+            call_count++;
+        });
 
         std::this_thread::sleep_for(20ms);
         executor.Stop();
 
         // The callback must be called exactly once, never 0 or 2
-        EXPECT_EQ(call_count.load(), 1)
-            << "Iteration " << iter << ": callback invoked "
-            << call_count.load() << " times (expected exactly 1)";
+        EXPECT_EQ(call_count.load(), 1) << "Iteration " << iter << ": callback invoked " << call_count.load()
+                                        << " times (expected exactly 1)";
     }
 }
 
@@ -114,17 +109,13 @@ TEST(SpawnTest, OnCompleteVoidRaceCondition) {
         std::atomic<int> call_count{0};
         ThreadPoolExecutor executor(4);
 
-        Spawn(executor, []() -> Task<void> { co_return; }())
-            .OnComplete([&call_count]() {
-                call_count++;
-            });
+        Spawn(executor, []() -> Task<void> { co_return; }()).OnComplete([&call_count]() { call_count++; });
 
         std::this_thread::sleep_for(20ms);
         executor.Stop();
 
-        EXPECT_EQ(call_count.load(), 1)
-            << "Iteration " << iter << ": callback invoked "
-            << call_count.load() << " times (expected exactly 1)";
+        EXPECT_EQ(call_count.load(), 1) << "Iteration " << iter << ": callback invoked " << call_count.load()
+                                        << " times (expected exactly 1)";
     }
 }
 
@@ -175,11 +166,7 @@ TEST(SpawnTest, VoidTaskCompletion) {
     std::atomic<bool> completed{false};
     ThreadPoolExecutor executor(2);
 
-    Spawn(executor, []() -> Task<void> {
-        co_return;
-    }()).OnComplete([&completed]() {
-        completed = true;
-    });
+    Spawn(executor, []() -> Task<void> { co_return; }()).OnComplete([&completed]() { completed = true; });
 
     std::this_thread::sleep_for(50ms);
     executor.Stop();
@@ -195,14 +182,9 @@ TEST(SpawnTest, SpawnWithStringResult) {
     std::string result;
     ThreadPoolExecutor executor(2);
 
-    auto task = []() -> Task<std::string> {
-        co_return "spawned";
-    };
+    auto task = []() -> Task<std::string> { co_return "spawned"; };
 
-    Spawn(executor, task())
-        .OnComplete([&result](std::string s) {
-            result = std::move(s);
-        });
+    Spawn(executor, task()).OnComplete([&result](std::string s) { result = std::move(s); });
 
     std::this_thread::sleep_for(50ms);
     executor.Stop();
@@ -226,5 +208,3 @@ TEST(SpawnTest, OnErrorAfterCompletion) {
     EXPECT_TRUE(complete_called.load());
     EXPECT_FALSE(error_called.load());
 }
-
-

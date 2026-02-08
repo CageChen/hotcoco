@@ -20,20 +20,19 @@
 
 #pragma once
 
-#include <llhttp.h>
+#include "hotcoco/core/task.hpp"
+#include "hotcoco/io/libuv_executor.hpp"
+#include "hotcoco/io/tcp.hpp"
 
 #include <algorithm>
 #include <functional>
+#include <llhttp.h>
 #include <map>
 #include <memory>
 #include <sstream>
 #include <string>
 #include <string_view>
 #include <vector>
-
-#include "hotcoco/core/task.hpp"
-#include "hotcoco/io/libuv_executor.hpp"
-#include "hotcoco/io/tcp.hpp"
 
 namespace hotcoco {
 
@@ -44,9 +43,7 @@ struct CaseInsensitiveLess {
     bool operator()(const std::string& a, const std::string& b) const {
         return std::lexicographical_compare(
             a.begin(), a.end(), b.begin(), b.end(),
-            [](unsigned char ca, unsigned char cb) {
-                return std::tolower(ca) < std::tolower(cb);
-            });
+            [](unsigned char ca, unsigned char cb) { return std::tolower(ca) < std::tolower(cb); });
     }
 };
 
@@ -55,16 +52,7 @@ using HeaderMap = std::map<std::string, std::string, CaseInsensitiveLess>;
 // ============================================================================
 // HttpMethod - HTTP request methods
 // ============================================================================
-enum class HttpMethod {
-    GET,
-    POST,
-    PUT,
-    DELETE,
-    PATCH,
-    HEAD,
-    OPTIONS,
-    UNKNOWN
-};
+enum class HttpMethod { GET, POST, PUT, DELETE, PATCH, HEAD, OPTIONS, UNKNOWN };
 
 const char* HttpMethodToString(HttpMethod method);
 HttpMethod HttpMethodFromLlhttp(llhttp_method_t method);
@@ -73,7 +61,7 @@ HttpMethod HttpMethodFromLlhttp(llhttp_method_t method);
 // HttpRequest - Parsed HTTP request
 // ============================================================================
 class HttpRequest {
-public:
+   public:
     HttpMethod method = HttpMethod::GET;
     std::string url;
     std::string path;
@@ -95,24 +83,23 @@ public:
 // HttpResponse - HTTP response to send
 // ============================================================================
 class HttpResponse {
-public:
+   public:
     int status_code = 200;
     std::string status_text = "OK";
     HeaderMap headers;
     std::string body;
-    
+
     // Factory methods for common responses
-    static HttpResponse Ok(const std::string& body = "",
-                           const std::string& content_type = "text/plain");
+    static HttpResponse Ok(const std::string& body = "", const std::string& content_type = "text/plain");
     static HttpResponse Html(const std::string& html);
     static HttpResponse Json(const std::string& json);
     static HttpResponse NotFound(const std::string& message = "Not Found");
     static HttpResponse BadRequest(const std::string& message = "Bad Request");
     static HttpResponse InternalError(const std::string& message = "Internal Server Error");
-    
+
     // Set a header
     HttpResponse& SetHeader(const std::string& name, const std::string& value);
-    
+
     // Serialize to HTTP wire format
     std::string Serialize() const;
 };
@@ -121,39 +108,39 @@ public:
 // HttpParser - llhttp-based request parser
 // ============================================================================
 class HttpParser {
-public:
+   public:
     static constexpr size_t kMaxBodySize = 10 * 1024 * 1024;  // 10 MB
-    static constexpr size_t kMaxUrlLength = 8192;              // 8 KB
+    static constexpr size_t kMaxUrlLength = 8192;             // 8 KB
     static constexpr size_t kMaxHeaderCount = 100;
-    static constexpr size_t kMaxTotalHeaderSize = 64 * 1024;   // 64 KB
+    static constexpr size_t kMaxTotalHeaderSize = 64 * 1024;  // 64 KB
 
     HttpParser();
     ~HttpParser();
-    
+
     // Parse incoming data, returns true when complete request is ready
     bool Parse(const char* data, size_t len);
-    
+
     // Get the parsed request (valid after Parse returns true)
     HttpRequest GetRequest();
-    
+
     // Reset parser for next request
     void Reset();
-    
+
     // Check if an error occurred
     bool HasError() const { return error_; }
     std::string GetError() const { return error_message_; }
-    
-private:
+
+   private:
     // llhttp callbacks
     static int OnUrl(llhttp_t* parser, const char* at, size_t len);
     static int OnHeaderField(llhttp_t* parser, const char* at, size_t len);
     static int OnHeaderValue(llhttp_t* parser, const char* at, size_t len);
     static int OnBody(llhttp_t* parser, const char* at, size_t len);
     static int OnMessageComplete(llhttp_t* parser);
-    
+
     llhttp_t parser_;
     llhttp_settings_t settings_;
-    
+
     // Parsing state
     HttpRequest request_;
     std::string current_header_field_;
@@ -169,7 +156,7 @@ private:
 // HttpServer - Async HTTP server
 // ============================================================================
 class HttpServer {
-public:
+   public:
     using RequestHandler = std::function<HttpResponse(const HttpRequest&)>;
     using Duration = std::chrono::milliseconds;
 
@@ -190,7 +177,7 @@ public:
     // Stop the server
     void Stop() { running_ = false; }
 
-private:
+   private:
     Task<void> HandleConnection(std::unique_ptr<TcpStream> stream);
 
     LibuvExecutor& executor_;

@@ -33,21 +33,20 @@
 
 #ifdef HOTCOCO_HAS_IOURING
 
-#include <liburing.h>
+#include "hotcoco/core/error.hpp"
+#include "hotcoco/core/result.hpp"
+#include "hotcoco/io/executor.hpp"
 
 #include <atomic>
 #include <chrono>
 #include <coroutine>
 #include <functional>
+#include <liburing.h>
 #include <memory>
 #include <mutex>
 #include <queue>
 #include <system_error>
 #include <unordered_set>
-
-#include "hotcoco/core/error.hpp"
-#include "hotcoco/core/result.hpp"
-#include "hotcoco/io/executor.hpp"
 
 namespace hotcoco {
 
@@ -55,7 +54,7 @@ namespace hotcoco {
 // IoUringExecutor - io_uring-based Executor Implementation
 // ============================================================================
 class IoUringExecutor : public Executor {
-public:
+   public:
     // Static factory — returns Result instead of throwing
     static Result<std::unique_ptr<IoUringExecutor>, std::error_code> Create(uint32_t queue_depth = 256);
     ~IoUringExecutor() override;
@@ -74,14 +73,13 @@ public:
     bool IsRunning() const override;
 
     void Schedule(std::coroutine_handle<> handle) override;
-    void ScheduleAfter(std::chrono::milliseconds delay,
-                       std::coroutine_handle<> handle) override;
+    void ScheduleAfter(std::chrono::milliseconds delay, std::coroutine_handle<> handle) override;
     void Post(std::function<void()> callback) override;
 
     // Access the underlying io_uring ring (for TCP, etc.)
     struct io_uring* GetRing() { return &ring_; }
 
-public:
+   public:
     // ========================================================================
     // Types (public for use by IoUringXxx() awaitables)
     // ========================================================================
@@ -97,11 +95,11 @@ public:
     struct OpContext {
         OpType type;
         std::coroutine_handle<> handle;
-        int32_t result = 0;             // CQE result for IO ops
-        __kernel_timespec ts{};          // Owned inline — no separate allocation
+        int32_t result = 0;      // CQE result for IO ops
+        __kernel_timespec ts{};  // Owned inline — no separate allocation
     };
 
-private:
+   private:
     // Timer request for thread-safe ScheduleAfter
     struct TimerRequest {
         std::chrono::milliseconds delay;

@@ -32,9 +32,9 @@
 
 #pragma once
 
-#include <utility>
-
 #include "hotcoco/core/task.hpp"
+
+#include <utility>
 
 namespace hotcoco {
 
@@ -43,8 +43,7 @@ namespace detail {
 // Coroutine that takes the functor BY VALUE (copied onto the frame),
 // invokes it with the given args, and co_awaits the resulting task.
 template <typename F, typename... Args>
-auto MakeInvokerTask(F functor, Args&&... args)
-    -> decltype(functor(std::forward<Args>(args)...)) {
+auto MakeInvokerTask(F functor, Args&&... args) -> decltype(functor(std::forward<Args>(args)...)) {
     auto user_task = functor(std::forward<Args>(args)...);
     co_return co_await user_task;
 }
@@ -64,8 +63,7 @@ auto MakeInvokerTask(F functor, Args&&... args)
 //
 template <typename F, typename... Args>
 auto Invoke(F functor, Args&&... args) -> decltype(auto) {
-    return detail::MakeInvokerTask(
-        std::forward<F>(functor), std::forward<Args>(args)...);
+    return detail::MakeInvokerTask(std::forward<F>(functor), std::forward<Args>(args)...);
 }
 
 }  // namespace hotcoco

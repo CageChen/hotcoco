@@ -2,11 +2,10 @@
 // SyncTcp Tests
 // ============================================================================
 
-#include <gtest/gtest.h>
-
-#include <thread>
-
 #include "hotcoco/io/sync_tcp.hpp"
+
+#include <gtest/gtest.h>
+#include <thread>
 
 using namespace hotcoco;
 

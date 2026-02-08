@@ -16,15 +16,15 @@
 
 #pragma once
 
-#include <chrono>
-#include <functional>
-#include <random>
-#include <system_error>
-
 #include "hotcoco/core/error.hpp"
 #include "hotcoco/core/result.hpp"
 #include "hotcoco/core/task.hpp"
 #include "hotcoco/io/timer.hpp"
+
+#include <chrono>
+#include <functional>
+#include <random>
+#include <system_error>
 
 namespace hotcoco {
 
@@ -39,8 +39,7 @@ struct RetryPolicy {
     bool add_jitter = true;
 
     // Predicate to check if error is retryable
-    std::function<bool(std::error_code)> should_retry =
-        [](std::error_code) { return true; };
+    std::function<bool(std::error_code)> should_retry = [](std::error_code) { return true; };
 };
 
 // ============================================================================
@@ -53,7 +52,7 @@ struct RetryPolicy {
 //
 template <typename T>
 class RetryBuilder {
-public:
+   public:
     using TaskFactory = std::function<Task<Result<T, std::error_code>>()>;
 
     explicit RetryBuilder(TaskFactory factory) : factory_(std::move(factory)) {}
@@ -63,10 +62,7 @@ public:
         return *this;
     }
 
-    RetryBuilder& WithExponentialBackoff(
-        std::chrono::milliseconds initial,
-        double multiplier = 2.0)
-    {
+    RetryBuilder& WithExponentialBackoff(std::chrono::milliseconds initial, double multiplier = 2.0) {
         policy_.initial_delay = initial;
         policy_.backoff_multiplier = multiplier;
         return *this;
@@ -100,8 +96,7 @@ public:
 
             last_error = result.Error();
 
-            bool should = (attempt + 1 < policy_.max_attempts) &&
-                          policy_.should_retry(last_error);
+            bool should = (attempt + 1 < policy_.max_attempts) && policy_.should_retry(last_error);
             if (!should) {
                 break;
             }
@@ -111,8 +106,7 @@ public:
             if (policy_.add_jitter) {
                 static thread_local std::mt19937 rng{std::random_device{}()};
                 std::uniform_real_distribution<> dist(0.5, 1.5);
-                actual_delay = std::chrono::milliseconds(
-                    static_cast<long>(delay.count() * dist(rng)));
+                actual_delay = std::chrono::milliseconds(static_cast<long>(delay.count() * dist(rng)));
             }
 
             // Cap at max delay
@@ -124,15 +118,14 @@ public:
             co_await AsyncSleep(actual_delay);
 
             // Increase delay for next attempt
-            delay = std::chrono::milliseconds(
-                static_cast<long>(delay.count() * policy_.backoff_multiplier));
+            delay = std::chrono::milliseconds(static_cast<long>(delay.count() * policy_.backoff_multiplier));
         }
 
         // All attempts failed
         co_return Err(last_error ? last_error : make_error_code(Errc::RetryExhausted));
     }
 
-private:
+   private:
     TaskFactory factory_;
     RetryPolicy policy_;
 };
@@ -154,9 +147,7 @@ template <typename F>
 auto Retry(F&& factory) {
     using TaskType = std::invoke_result_t<F>;
     using ReturnType = typename RetryResultType<TaskType>::type;
-    return RetryBuilder<ReturnType>([f = std::forward<F>(factory)]() mutable {
-        return f();
-    });
+    return RetryBuilder<ReturnType>([f = std::forward<F>(factory)]() mutable { return f(); });
 }
 
 }  // namespace hotcoco

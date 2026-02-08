@@ -10,12 +10,12 @@
 //
 // ============================================================================
 
-#include <chrono>
-#include <iostream>
-
 #include "hotcoco/core/task.hpp"
 #include "hotcoco/io/libuv_executor.hpp"
 #include "hotcoco/io/timer.hpp"
+
+#include <chrono>
+#include <iostream>
 
 using namespace hotcoco;
 using namespace std::chrono_literals;
@@ -26,15 +26,12 @@ LibuvExecutor* g_executor = nullptr;
 // A task that sleeps and prints
 Task<void> SleepAndPrint(const char* name, std::chrono::milliseconds delay) {
     auto start = std::chrono::steady_clock::now();
-    std::cout << "[" << name << "] Starting, will sleep for "
-              << delay.count() << "ms..." << std::endl;
+    std::cout << "[" << name << "] Starting, will sleep for " << delay.count() << "ms..." << std::endl;
 
     co_await AsyncSleep(delay);
 
-    auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
-        std::chrono::steady_clock::now() - start);
-    std::cout << "[" << name << "] Woke up after "
-              << elapsed.count() << "ms!" << std::endl;
+    auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start);
+    std::cout << "[" << name << "] Woke up after " << elapsed.count() << "ms!" << std::endl;
 }
 
 // Main async task
@@ -58,10 +55,8 @@ Task<void> MainTask() {
     // Wait longer than all tasks to ensure they complete
     co_await AsyncSleep(200ms);
 
-    auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
-        std::chrono::steady_clock::now() - start);
-    std::cout << "=== All tasks completed in " << elapsed.count()
-              << "ms ===" << std::endl;
+    auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start);
+    std::cout << "=== All tasks completed in " << elapsed.count() << "ms ===" << std::endl;
 
     // Stop the executor
     g_executor->Stop();
@@ -78,8 +73,7 @@ Task<void> SequentialDemo() {
         std::cout << "Step " << i << " done!" << std::endl;
     }
 
-    auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
-        std::chrono::steady_clock::now() - start);
+    auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start);
     std::cout << "Sequential demo took " << elapsed.count() << "ms" << std::endl;
     std::cout << "(Expected ~150ms for 3 x 50ms sleeps)" << std::endl;
 

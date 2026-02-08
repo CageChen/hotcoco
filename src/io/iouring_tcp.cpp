@@ -6,14 +6,14 @@
 
 #include "hotcoco/io/iouring_tcp.hpp"
 
-#include <arpa/inet.h>
-#include <netinet/in.h>
-#include <sys/socket.h>
-#include <unistd.h>
-
-#include <cstring>
-
 #include "hotcoco/io/iouring_async_ops.hpp"
+
+#include <sys/socket.h>
+
+#include <arpa/inet.h>
+#include <cstring>
+#include <netinet/in.h>
+#include <unistd.h>
 
 namespace hotcoco {
 
@@ -21,8 +21,7 @@ namespace hotcoco {
 // IoUringTcpListener Implementation
 // ============================================================================
 
-IoUringTcpListener::IoUringTcpListener(IoUringExecutor& executor)
-    : executor_(executor) {}
+IoUringTcpListener::IoUringTcpListener(IoUringExecutor& executor) : executor_(executor) {}
 
 IoUringTcpListener::~IoUringTcpListener() {
     if (!closed_ && listen_fd_ >= 0) {
@@ -57,8 +56,7 @@ int IoUringTcpListener::Bind(const std::string& host, uint16_t port) {
         return -EINVAL;
     }
 
-    int ret = bind(listen_fd_, reinterpret_cast<const struct sockaddr*>(&addr),
-                   sizeof(addr));
+    int ret = bind(listen_fd_, reinterpret_cast<const struct sockaddr*>(&addr), sizeof(addr));
     if (ret < 0) {
         int err = errno;
         close(listen_fd_);
@@ -106,8 +104,7 @@ Task<std::unique_ptr<IoUringTcpStream>> IoUringTcpListener::Accept() {
 // IoUringTcpStream Implementation
 // ============================================================================
 
-IoUringTcpStream::IoUringTcpStream(IoUringExecutor& executor)
-    : executor_(executor) {}
+IoUringTcpStream::IoUringTcpStream(IoUringExecutor& executor) : executor_(executor) {}
 
 IoUringTcpStream::~IoUringTcpStream() {
     Close();
@@ -147,8 +144,7 @@ Task<int> IoUringTcpStream::Connect(const std::string& host, uint16_t port) {
         co_return -EINVAL;
     }
 
-    int32_t result = co_await IoUringConnect(
-        fd_, reinterpret_cast<const struct sockaddr*>(&addr), sizeof(addr));
+    int32_t result = co_await IoUringConnect(fd_, reinterpret_cast<const struct sockaddr*>(&addr), sizeof(addr));
     if (result < 0) {
         close(fd_);
         fd_ = -1;
@@ -185,9 +181,7 @@ Task<ssize_t> IoUringTcpStream::Write(std::string_view data) {
     std::string owned(data);
     size_t total_sent = 0;
     while (total_sent < owned.size()) {
-        int32_t result = co_await IoUringSend(
-            fd_, owned.data() + total_sent,
-            owned.size() - total_sent, MSG_NOSIGNAL);
+        int32_t result = co_await IoUringSend(fd_, owned.data() + total_sent, owned.size() - total_sent, MSG_NOSIGNAL);
         if (result <= 0) {
             // On error, return bytes already sent if any, otherwise the error
             co_return total_sent > 0 ? static_cast<ssize_t>(total_sent) : static_cast<ssize_t>(result);

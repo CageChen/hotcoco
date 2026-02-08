@@ -24,15 +24,16 @@
 
 #ifdef HOTCOCO_HAS_IOURING
 
+#include "hotcoco/core/task.hpp"
+#include "hotcoco/io/iouring_executor.hpp"
+
+#include <sys/types.h>
+
 #include <cstdint>
 #include <memory>
 #include <string>
 #include <string_view>
-#include <sys/types.h>
 #include <vector>
-
-#include "hotcoco/core/task.hpp"
-#include "hotcoco/io/iouring_executor.hpp"
 
 namespace hotcoco {
 
@@ -43,7 +44,7 @@ class IoUringTcpStream;
 // IoUringTcpListener - Accept Incoming Connections via io_uring
 // ============================================================================
 class IoUringTcpListener {
-public:
+   public:
     explicit IoUringTcpListener(IoUringExecutor& executor);
     ~IoUringTcpListener();
 
@@ -61,7 +62,7 @@ public:
 
     IoUringExecutor& GetExecutor() { return executor_; }
 
-private:
+   private:
     IoUringExecutor& executor_;
     int listen_fd_ = -1;
     bool closed_ = false;
@@ -71,7 +72,7 @@ private:
 // IoUringTcpStream - Async TCP Connection via io_uring
 // ============================================================================
 class IoUringTcpStream {
-public:
+   public:
     explicit IoUringTcpStream(IoUringExecutor& executor);
     ~IoUringTcpStream();
 
@@ -94,7 +95,7 @@ public:
     bool IsOpen() const { return fd_ >= 0 && !closed_; }
     void InitFromFd(int fd);
 
-private:
+   private:
     IoUringExecutor& executor_;
     int fd_ = -1;
     bool closed_ = false;
