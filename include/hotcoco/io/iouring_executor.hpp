@@ -43,6 +43,7 @@
 #include <mutex>
 #include <queue>
 #include <system_error>
+#include <unordered_set>
 
 #include "hotcoco/core/error.hpp"
 #include "hotcoco/core/result.hpp"
@@ -80,24 +81,27 @@ public:
     // Access the underlying io_uring ring (for TCP, etc.)
     struct io_uring* GetRing() { return &ring_; }
 
-private:
+public:
     // ========================================================================
-    // Internal Types
+    // Types (public for use by IoUringXxx() awaitables)
     // ========================================================================
 
     // Operation types for completion queue entries
     enum class OpType : uint8_t {
         Wakeup,   // eventfd read completion
         Timeout,  // Timer completion
+        IO,       // Generic I/O (TCP accept/connect/recv/send, etc.)
     };
 
     // Context for completion queue entries
     struct OpContext {
         OpType type;
-        std::coroutine_handle<> handle;  // For Timeout ops
+        std::coroutine_handle<> handle;
+        int32_t result = 0;             // CQE result for IO ops
         __kernel_timespec ts{};          // Owned inline — no separate allocation
     };
 
+private:
     // Timer request for thread-safe ScheduleAfter
     struct TimerRequest {
         std::chrono::milliseconds delay;
@@ -136,7 +140,11 @@ private:
     uint64_t eventfd_buf_ = 0;
 
     // Context for the wakeup operation (reused)
-    OpContext wakeup_ctx_{OpType::Wakeup, nullptr, {}};
+    OpContext wakeup_ctx_{OpType::Wakeup, nullptr, 0, {}};
+
+    // Track heap-allocated OpContexts (Timeout) so the destructor can free
+    // any that are still in-flight in the kernel when the executor is destroyed.
+    std::unordered_set<OpContext*> pending_timeouts_;
 
     // Private constructor used by Create()
     IoUringExecutor(struct io_uring ring, int eventfd);

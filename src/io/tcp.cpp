@@ -41,13 +41,19 @@ uv_loop_t* TcpListener::GetLoop() {
 }
 
 int TcpListener::Bind(const std::string& host, uint16_t port) {
+    if (bound_) return UV_EALREADY;
+
     struct sockaddr_in addr;
     int result = uv_ip4_addr(host.c_str(), port, &addr);
     if (result != 0) {
         return result;
     }
 
-    return uv_tcp_bind(server_, reinterpret_cast<const sockaddr*>(&addr), 0);
+    result = uv_tcp_bind(server_, reinterpret_cast<const sockaddr*>(&addr), 0);
+    if (result == 0) {
+        bound_ = true;
+    }
+    return result;
 }
 
 int TcpListener::Listen(int backlog) {
@@ -130,6 +136,7 @@ TcpStream::~TcpStream() {
 }
 
 void TcpStream::InitFromAccept(uv_stream_t* server) {
+    if (initialized_) return;  // Already initialized
     uv_tcp_init(server->loop, socket_);
     socket_->data = this;
     initialized_ = true;
@@ -167,6 +174,11 @@ void TcpStream::OnClose(uv_handle_t* handle) {
 // ============================================================================
 
 bool TcpStream::ConnectAwaitable::await_suspend(std::coroutine_handle<> handle) {
+    if (stream_.initialized_) {
+        sync_error_ = UV_EALREADY;
+        return false;
+    }
+
     stream_.connect_waiter_ = handle;
 
     // Initialize the socket

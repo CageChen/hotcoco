@@ -25,7 +25,7 @@ make clean          # Remove all build directories
 cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -DBUILD_EXAMPLES=ON
 ninja -C build -j$(nproc)
 
-# Run all tests (365 tests across 33 test files)
+# Run all tests
 ctest --test-dir build --output-on-failure
 
 # Run a single test (use --gtest_filter)
@@ -100,7 +100,7 @@ All types are in the `hotcoco` namespace. Include `<hotcoco/hotcoco.hpp>` for ev
 
 ## Testing
 
-Tests use Google Test. Each component has a corresponding `*_test.cpp` file in `tests/` (33 test files, 365 tests). The test executable is `hotcoco_test`.
+Tests use Google Test. Each component has a corresponding `*_test.cpp` file in `tests/`. The test executable is `hotcoco_test`.
 
 ## Dependencies (auto-fetched via CMake)
 

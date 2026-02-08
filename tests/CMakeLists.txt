@@ -15,6 +15,7 @@ add_executable(hotcoco_test
     http_test.cpp
     invoke_test.cpp
     iouring_executor_test.cpp
+    iouring_tcp_test.cpp
     latch_test.cpp
     mutex_test.cpp
     periodic_timer_test.cpp

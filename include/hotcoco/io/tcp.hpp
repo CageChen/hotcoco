@@ -108,6 +108,7 @@ private:
     std::queue<std::unique_ptr<TcpStream>> pending_connections_;
     std::coroutine_handle<> accept_waiter_;
     bool closed_ = false;
+    bool bound_ = false;
 };
 
 // ============================================================================

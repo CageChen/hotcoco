@@ -5,7 +5,6 @@
 [![C++20](https://img.shields.io/badge/C%2B%2B-20-blue.svg)](https://en.cppreference.com/w/cpp/20)
 [![Linux](https://img.shields.io/badge/platform-Linux-green.svg)]()
 [![License: MIT](https://img.shields.io/badge/license-MIT-yellow.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-365%20passed-brightgreen.svg)]()
 
 Hotcoco brings the ergonomics of modern async/await to C++20 with **zero exceptions**, **pluggable executors**, and **coroutine-native synchronization** — all in a single, well-documented library.
 
@@ -201,7 +200,7 @@ Step-by-step guides covering the *what*, *how*, and *why* of each component:
 ```bash
 # Quick start
 make build          # Configure + build (Release)
-make test           # Build + run all 365 tests
+make test           # Build + run all tests
 make test-asan      # ASan+UBSan build + test
 make test-tsan      # TSan build + test
 make clean          # Remove all build directories
@@ -216,7 +215,7 @@ ctest --test-dir build --output-on-failure
 
 | Option | Default | Description |
 |--------|---------|-------------|
-| `BUILD_TESTS` | ON | Build unit tests (365 tests across 33 files) |
+| `BUILD_TESTS` | ON | Build unit tests |
 | `BUILD_EXAMPLES` | ON | Build example programs |
 | `BUILD_BENCHMARKS` | OFF | Build performance benchmarks |
 | `ENABLE_IOURING` | ON | Enable io_uring executor (requires liburing) |

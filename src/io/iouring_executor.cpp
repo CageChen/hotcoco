@@ -44,6 +44,29 @@ IoUringExecutor::~IoUringExecutor() {
         Stop();
     }
 
+    // Drain any CQEs that arrived between the last ProcessCompletions() and now
+    struct io_uring_cqe* cqe;
+    unsigned head;
+    unsigned count = 0;
+    io_uring_for_each_cqe(&ring_, head, cqe) {
+        ++count;
+        auto* ctx = static_cast<OpContext*>(io_uring_cqe_get_data(cqe));
+        if (ctx && ctx != &wakeup_ctx_ && ctx->type == OpType::Timeout) {
+            pending_timeouts_.erase(ctx);
+            delete ctx;
+        }
+    }
+    if (count > 0) {
+        io_uring_cq_advance(&ring_, count);
+    }
+
+    // Delete any remaining in-flight timeout OpContexts that the kernel
+    // hasn't completed yet (e.g. timers submitted but not yet fired)
+    for (auto* ctx : pending_timeouts_) {
+        delete ctx;
+    }
+    pending_timeouts_.clear();
+
     if (eventfd_ >= 0) {
         close(eventfd_);
     }
@@ -177,10 +200,20 @@ void IoUringExecutor::ProcessCompletions() {
                 case OpType::Timeout: {
                     // Timer fired - resume the coroutine
                     // Note: res == -ETIME is the normal timeout completion
+                    pending_timeouts_.erase(ctx);
                     if (ctx->handle) {
                         ctx->handle.resume();
                     }
                     delete ctx;
+                    break;
+                }
+                case OpType::IO: {
+                    // Generic I/O completion — store result and resume
+                    // OpContext lives on the coroutine frame, NOT deleted here
+                    ctx->result = cqe->res;
+                    if (ctx->handle) {
+                        ctx->handle.resume();
+                    }
                     break;
                 }
                 case OpType::Wakeup:
@@ -230,7 +263,7 @@ void IoUringExecutor::ProcessReadyQueue() {
         timers.pop();
 
         // OpContext owns the __kernel_timespec inline — no separate allocation
-        auto* ctx = new OpContext{OpType::Timeout, req.handle, {}};
+        auto* ctx = new OpContext{OpType::Timeout, req.handle, 0, {}};
         ctx->ts.tv_sec = req.delay.count() / 1000;
         ctx->ts.tv_nsec = (req.delay.count() % 1000) * 1000000;
 
@@ -247,6 +280,7 @@ void IoUringExecutor::ProcessReadyQueue() {
         io_uring_prep_timeout(sqe, &ctx->ts, 0, 0);
         io_uring_sqe_set_data(sqe, ctx);
         io_uring_submit(&ring_);
+        pending_timeouts_.insert(ctx);
     }
 }
 

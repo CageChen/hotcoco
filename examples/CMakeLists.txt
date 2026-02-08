@@ -44,3 +44,12 @@ target_link_libraries(05_http_server
     PRIVATE
         hotcoco
 )
+
+add_executable(06_iouring_echo_server
+    06_iouring_echo_server.cpp
+)
+
+target_link_libraries(06_iouring_echo_server
+    PRIVATE
+        hotcoco
+)
