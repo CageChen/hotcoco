@@ -1,4 +1,4 @@
-.PHONY: build test test-asan test-tsan test-all clean format check-format lint
+.PHONY: build test test-asan test-tsan test-all clean format check-format lint setup
 
 BUILD_DIR       := build
 BUILD_ASAN_DIR  := build-asan
@@ -44,3 +44,7 @@ check-format:
 # --- Run clang-tidy on all source files ---
 lint: build
 	run-clang-tidy -p $(BUILD_DIR) -header-filter='include/hotcoco/.*'
+
+# --- Set up local git hooks ---
+setup:
+	git config core.hooksPath .githooks

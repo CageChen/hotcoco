@@ -1,0 +1,14 @@
+#!/bin/sh
+# Pre-commit hook: check clang-format on staged C++/HPP files
+
+STAGED=$(git diff --cached --name-only --diff-filter=ACM -- '*.cpp' '*.hpp')
+if [ -z "$STAGED" ]; then
+    exit 0
+fi
+
+echo "$STAGED" | xargs clang-format --dry-run --Werror 2>&1
+if [ $? -ne 0 ]; then
+    echo ""
+    echo "Format check failed. Run 'make format' and re-stage."
+    exit 1
+fi
