@@ -101,7 +101,7 @@ TEST(HttpTest, ParserQueryString) {
         "Host: localhost\r\n"
         "\r\n";
 
-    parser.Parse(request, strlen(request));
+    ASSERT_TRUE(parser.Parse(request, strlen(request)));
     auto req = parser.GetRequest();
 
     EXPECT_EQ(req.path, "/search");
@@ -234,7 +234,7 @@ TEST(HttpTest, ServerHandlesRequest) {
 
         // Parse with HttpParser
         HttpParser parser;
-        parser.Parse(data.data(), data.size());
+        EXPECT_TRUE(parser.Parse(data.data(), data.size()));
         auto req = parser.GetRequest();
 
         request_received = true;

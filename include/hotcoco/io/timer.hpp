@@ -41,7 +41,7 @@ namespace hotcoco {
 // This is an awaitable that suspends the coroutine for a specified duration.
 // When resumed, it returns void (no value).
 //
-class AsyncSleep {
+class [[nodiscard("AsyncSleep must be co_awaited")]] AsyncSleep {
    public:
     // ========================================================================
     // Construction
@@ -93,7 +93,7 @@ class AsyncSleep {
 
 namespace literals {
 
-inline AsyncSleep operator""_sleep(unsigned long long ms) {
+[[nodiscard]] inline AsyncSleep operator""_sleep(unsigned long long ms) {
     return AsyncSleep(std::chrono::milliseconds(ms));
 }
 

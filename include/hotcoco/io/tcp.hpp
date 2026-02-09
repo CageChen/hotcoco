@@ -65,12 +65,12 @@ class TcpListener {
 
     // Bind to an address and port
     // Returns 0 on success, negative libuv error code on failure
-    int Bind(const std::string& host, uint16_t port);
+    [[nodiscard]] int Bind(const std::string& host, uint16_t port);
 
     // Start listening for connections
     // backlog: Maximum pending connections (default 128)
     // Returns 0 on success, negative libuv error code on failure
-    int Listen(int backlog = 128);
+    [[nodiscard]] int Listen(int backlog = 128);
 
     // ========================================================================
     // Accept Awaitable
@@ -89,7 +89,7 @@ class TcpListener {
         TcpListener& listener_;
     };
 
-    AcceptAwaitable Accept() { return AcceptAwaitable(*this); }
+    [[nodiscard]] AcceptAwaitable Accept() { return AcceptAwaitable(*this); }
 
     // ========================================================================
     // Internal
@@ -146,7 +146,9 @@ class TcpStream {
         int sync_error_ = 0;  // Set on synchronous errors (await_suspend returns false)
     };
 
-    ConnectAwaitable Connect(const std::string& host, uint16_t port) { return ConnectAwaitable(*this, host, port); }
+    [[nodiscard]] ConnectAwaitable Connect(const std::string& host, uint16_t port) {
+        return ConnectAwaitable(*this, host, port);
+    }
 
     // ========================================================================
     // Reading
@@ -165,7 +167,7 @@ class TcpStream {
         size_t max_bytes_;
     };
 
-    ReadAwaitable Read(size_t max_bytes = 4096) { return ReadAwaitable(*this, max_bytes); }
+    [[nodiscard]] ReadAwaitable Read(size_t max_bytes = 4096) { return ReadAwaitable(*this, max_bytes); }
 
     // ========================================================================
     // Writing
@@ -185,7 +187,7 @@ class TcpStream {
         int bytes_written_ = 0;
     };
 
-    WriteAwaitable Write(std::string_view data) { return WriteAwaitable(*this, data); }
+    [[nodiscard]] WriteAwaitable Write(std::string_view data) { return WriteAwaitable(*this, data); }
 
     // ========================================================================
     // Connection Management
@@ -195,7 +197,7 @@ class TcpStream {
     void Close();
 
     // Check if connection is open
-    bool IsOpen() const { return !closed_; }
+    [[nodiscard]] bool IsOpen() const { return !closed_; }
 
     // Get the underlying handle (for TcpListener to initialize)
     uv_tcp_t* GetHandle() { return socket_; }

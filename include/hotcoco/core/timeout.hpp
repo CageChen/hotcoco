@@ -142,7 +142,7 @@ Task<void> TimeoutControllerVoid(std::shared_ptr<TimeoutStateVoid> state, Task<v
 // WithTimeout for Task<T> - returns Result<T, TimeoutError>
 // ============================================================================
 template <typename T, typename Rep, typename Period>
-Task<Result<T, TimeoutError>> WithTimeout(Task<T> task, std::chrono::duration<Rep, Period> timeout) {
+[[nodiscard]] Task<Result<T, TimeoutError>> WithTimeout(Task<T> task, std::chrono::duration<Rep, Period> timeout) {
     auto state = std::make_shared<detail::TimeoutState<T>>();
 
     auto controller = MakeDetached(detail::TimeoutController<T>(state, std::move(task), timeout));
@@ -159,7 +159,8 @@ Task<Result<T, TimeoutError>> WithTimeout(Task<T> task, std::chrono::duration<Re
 
 // Specialization for Task<void>
 template <typename Rep, typename Period>
-Task<Result<void, TimeoutError>> WithTimeout(Task<void> task, std::chrono::duration<Rep, Period> timeout) {
+[[nodiscard]] Task<Result<void, TimeoutError>> WithTimeout(Task<void> task,
+                                                           std::chrono::duration<Rep, Period> timeout) {
     auto state = std::make_shared<detail::TimeoutStateVoid>();
 
     auto controller = MakeDetached(detail::TimeoutControllerVoid(state, std::move(task), timeout));

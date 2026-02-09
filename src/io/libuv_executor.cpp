@@ -4,7 +4,7 @@
 
 #include "hotcoco/io/libuv_executor.hpp"
 
-#include <cassert>
+#include "hotcoco/core/check.hpp"
 
 namespace hotcoco {
 
@@ -225,8 +225,14 @@ void LibuvExecutor::ProcessReadyQueue() {
 
         auto* timer = new uv_timer_t;
         int result = uv_timer_init(&loop_, timer);
-        assert(result == 0 && "Failed to initialize timer");
-        (void)result;
+        if (result != 0) {
+            // Timer init failed — fall back to immediate resume
+            delete timer;
+            if (req.handle) {
+                req.handle.resume();
+            }
+            continue;
+        }
 
         auto* scheduled = new ScheduledHandle{req.handle, timer};
         timer->data = scheduled;

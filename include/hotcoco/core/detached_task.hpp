@@ -35,7 +35,7 @@
 
 namespace hotcoco {
 
-class DetachedTask {
+class [[nodiscard("DetachedTask must be Start()ed")]] DetachedTask {
    public:
     struct promise_type {
         std::function<void()> callback;
@@ -122,7 +122,7 @@ class DetachedTask {
 };
 
 // Helper: wrap a Task<void> into a DetachedTask
-inline DetachedTask MakeDetached(Task<void> task) {
+[[nodiscard]] inline DetachedTask MakeDetached(Task<void> task) {
     co_await std::move(task);
 }
 

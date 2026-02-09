@@ -100,7 +100,7 @@ class ThreadPoolExecutor : public Executor {
     void Stop() override;
 
     // Check if running
-    bool IsRunning() const override;
+    [[nodiscard]] bool IsRunning() const override;
 
     // Schedule a coroutine to run on a worker thread
     void Schedule(std::coroutine_handle<> handle) override;
@@ -116,10 +116,10 @@ class ThreadPoolExecutor : public Executor {
     // ========================================================================
 
     // Get the number of worker threads
-    size_t NumThreads() const { return workers_.size(); }
+    [[nodiscard]] size_t NumThreads() const { return workers_.size(); }
 
     // Get the number of pending tasks
-    size_t PendingTasks() const;
+    [[nodiscard]] size_t PendingTasks() const;
 
    private:
     // Work item: either a coroutine handle or a callback

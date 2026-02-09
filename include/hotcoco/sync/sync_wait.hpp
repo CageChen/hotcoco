@@ -155,7 +155,7 @@ SyncWaitTask<T> SyncWaitPromise<T>::get_return_object() noexcept {
 // complete synchronously or that run their own executor internally.
 //
 template <typename T>
-T SyncWait(Task<T> task) {
+[[nodiscard]] T SyncWait(Task<T> task) {
     detail::SyncWaitEvent event;
     std::optional<T> result;
 

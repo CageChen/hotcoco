@@ -65,7 +65,7 @@ class Executor {
     virtual void Stop() = 0;
 
     // Check if the executor is running
-    virtual bool IsRunning() const = 0;
+    [[nodiscard]] virtual bool IsRunning() const = 0;
 
     // ========================================================================
     // Coroutine Scheduling
@@ -95,7 +95,7 @@ class Executor {
 //
 
 // Get the current thread's executor (nullptr if none set)
-Executor* GetCurrentExecutor();
+[[nodiscard]] Executor* GetCurrentExecutor();
 
 // Set the current thread's executor (used internally by Run())
 void SetCurrentExecutor(Executor* executor);

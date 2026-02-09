@@ -53,12 +53,12 @@ class IoUringTcpListener {
     IoUringTcpListener& operator=(const IoUringTcpListener&) = delete;
 
     // Synchronous setup
-    int Bind(const std::string& host, uint16_t port);
-    int Listen(int backlog = 128);
-    uint16_t GetPort() const;
+    [[nodiscard]] int Bind(const std::string& host, uint16_t port);
+    [[nodiscard]] int Listen(int backlog = 128);
+    [[nodiscard]] uint16_t GetPort() const;
 
     // Async accept — returns Task yielding unique_ptr<IoUringTcpStream>
-    Task<std::unique_ptr<IoUringTcpStream>> Accept();
+    [[nodiscard]] Task<std::unique_ptr<IoUringTcpStream>> Accept();
 
     IoUringExecutor& GetExecutor() { return executor_; }
 
@@ -81,18 +81,18 @@ class IoUringTcpStream {
     IoUringTcpStream& operator=(const IoUringTcpStream&) = delete;
 
     // Connect to a remote host
-    Task<int> Connect(const std::string& host, uint16_t port);
+    [[nodiscard]] Task<int> Connect(const std::string& host, uint16_t port);
 
     // Read up to max_bytes. Returns data on success, empty vector on EOF.
     // Sets closed_ only on EOF (result==0), not on errors.
-    Task<std::vector<char>> Read(size_t max_bytes = 4096);
+    [[nodiscard]] Task<std::vector<char>> Read(size_t max_bytes = 4096);
 
     // Write data, returns bytes written or negative error.
     // On partial write followed by error, returns bytes successfully sent.
-    Task<ssize_t> Write(std::string_view data);
+    [[nodiscard]] Task<ssize_t> Write(std::string_view data);
 
     void Close();
-    bool IsOpen() const { return fd_ >= 0 && !closed_; }
+    [[nodiscard]] bool IsOpen() const { return fd_ >= 0 && !closed_; }
     void InitFromFd(int fd);
 
    private:

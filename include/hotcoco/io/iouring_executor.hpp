@@ -56,7 +56,7 @@ namespace hotcoco {
 class IoUringExecutor : public Executor {
    public:
     // Static factory — returns Result instead of throwing
-    static Result<std::unique_ptr<IoUringExecutor>, std::error_code> Create(uint32_t queue_depth = 256);
+    [[nodiscard]] static Result<std::unique_ptr<IoUringExecutor>, std::error_code> Create(uint32_t queue_depth = 256);
     ~IoUringExecutor() override;
 
     // Non-copyable, non-movable (io_uring state can't be moved)
@@ -70,14 +70,14 @@ class IoUringExecutor : public Executor {
     void Run() override;
     void RunOnce() override;
     void Stop() override;
-    bool IsRunning() const override;
+    [[nodiscard]] bool IsRunning() const override;
 
     void Schedule(std::coroutine_handle<> handle) override;
     void ScheduleAfter(std::chrono::milliseconds delay, std::coroutine_handle<> handle) override;
     void Post(std::function<void()> callback) override;
 
     // Access the underlying io_uring ring (for TCP, etc.)
-    struct io_uring* GetRing() { return &ring_; }
+    [[nodiscard]] struct io_uring* GetRing() { return &ring_; }
 
    public:
     // ========================================================================

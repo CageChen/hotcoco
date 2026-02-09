@@ -135,7 +135,7 @@ class PollingExecutor : public Executor {
     void Run() override;
     void RunOnce() override;
     void Stop() override;
-    bool IsRunning() const override;
+    [[nodiscard]] bool IsRunning() const override;
 
     void Schedule(std::coroutine_handle<> handle) override;
     void ScheduleAfter(std::chrono::milliseconds delay, std::coroutine_handle<> handle) override;

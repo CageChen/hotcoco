@@ -57,7 +57,7 @@ class YieldAwaitable {
     void await_resume() const noexcept {}
 };
 
-inline YieldAwaitable Yield() {
+[[nodiscard]] inline YieldAwaitable Yield() {
     return {};
 }
 
@@ -83,7 +83,7 @@ class ScheduleOnAwaitable {
     Executor& target_;
 };
 
-inline ScheduleOnAwaitable ScheduleOn(Executor& target) {
+[[nodiscard]] inline ScheduleOnAwaitable ScheduleOn(Executor& target) {
     return ScheduleOnAwaitable{target};
 }
 

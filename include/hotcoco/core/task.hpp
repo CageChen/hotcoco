@@ -39,9 +39,9 @@
 
 #pragma once
 
+#include "hotcoco/core/check.hpp"
 #include "hotcoco/core/coroutine_compat.hpp"
 
-#include <cassert>
 #include <coroutine>
 #include <cstdlib>
 #include <optional>
@@ -164,7 +164,7 @@ class TaskPromise {
     // We store it here so final_suspend can resume it when we complete.
     //
     void SetContinuation(std::coroutine_handle<> cont) noexcept {
-        assert(!awaited_ && "Task<T> co_awaited twice — this is undefined behavior");
+        HOTCOCO_CHECK(!awaited_, "Task<T> co_awaited twice — this is undefined behavior");
         awaited_ = true;
         continuation_ = cont;
     }
@@ -186,7 +186,7 @@ class TaskPromise {
 // - Awaitable: Can be co_awaited
 //
 template <typename T>
-class Task {
+class [[nodiscard("Task must be co_awaited")]] Task {
    public:
     // Required by the compiler to find our promise type
     using promise_type = TaskPromise<T>;
@@ -254,12 +254,12 @@ class Task {
         T await_resume() noexcept { return std::move(handle_.promise()).GetResult(); }
     };
 
-    Awaiter operator co_await() noexcept { return Awaiter{handle_}; }
+    [[nodiscard]] Awaiter operator co_await() noexcept { return Awaiter{handle_}; }
 
     // ========================================================================
     // Direct Access (for SyncWait and testing)
     // ========================================================================
-    Handle GetHandle() const noexcept { return handle_; }
+    [[nodiscard]] Handle GetHandle() const noexcept { return handle_; }
 
    private:
     Handle handle_;
@@ -311,7 +311,7 @@ class TaskPromise<void> {
     void GetResult() noexcept {}
 
     void SetContinuation(std::coroutine_handle<> cont) noexcept {
-        assert(!awaited_ && "Task<void> co_awaited twice — this is undefined behavior");
+        HOTCOCO_CHECK(!awaited_, "Task<void> co_awaited twice — this is undefined behavior");
         awaited_ = true;
         continuation_ = cont;
     }
@@ -322,7 +322,7 @@ class TaskPromise<void> {
 };
 
 template <>
-class Task<void> {
+class [[nodiscard("Task must be co_awaited")]] Task<void> {
    public:
     using promise_type = TaskPromise<void>;
     using Handle = std::coroutine_handle<promise_type>;
@@ -363,9 +363,9 @@ class Task<void> {
         void await_resume() noexcept { handle_.promise().GetResult(); }
     };
 
-    Awaiter operator co_await() noexcept { return Awaiter{handle_}; }
+    [[nodiscard]] Awaiter operator co_await() noexcept { return Awaiter{handle_}; }
 
-    Handle GetHandle() const noexcept { return handle_; }
+    [[nodiscard]] Handle GetHandle() const noexcept { return handle_; }
 
    private:
     Handle handle_;

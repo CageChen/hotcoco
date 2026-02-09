@@ -66,7 +66,7 @@ class AsyncLatch {
     // Public API
     // ========================================================================
 
-    WaitAwaitable Wait() { return WaitAwaitable(*this); }
+    [[nodiscard]] WaitAwaitable Wait() { return WaitAwaitable(*this); }
 
     void CountDown(size_t n = 1) {
         std::vector<std::coroutine_handle<>> to_wake;

@@ -302,18 +302,18 @@ class WhenAllVectorAwaitable<void> {
 
 // Variadic version: WhenAll(Task<A>, Task<B>, Task<C>) -> Task<tuple<A,B,C>>
 template <typename... Ts>
-Task<std::tuple<Ts...>> WhenAll(Task<Ts>... tasks) {
+[[nodiscard]] Task<std::tuple<Ts...>> WhenAll(Task<Ts>... tasks) {
     co_return co_await detail::WhenAllTupleAwaitable<Ts...>(std::move(tasks)...);
 }
 
 // Vector version: WhenAll(vector<Task<T>>) -> Task<vector<T>>
 template <typename T>
-Task<std::vector<T>> WhenAll(std::vector<Task<T>> tasks) {
+[[nodiscard]] Task<std::vector<T>> WhenAll(std::vector<Task<T>> tasks) {
     co_return co_await detail::WhenAllVectorAwaitable<T>(std::move(tasks));
 }
 
 // Vector void version: WhenAll(vector<Task<void>>) -> Task<void>
-inline Task<void> WhenAll(std::vector<Task<void>> tasks) {
+[[nodiscard]] inline Task<void> WhenAll(std::vector<Task<void>> tasks) {
     co_await detail::WhenAllVectorAwaitable<void>(std::move(tasks));
 }
 

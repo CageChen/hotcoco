@@ -235,7 +235,7 @@ TEST(TcpTest, SyncTcpConnectToLocalhost) {
         ASSERT_TRUE(stream_result.IsOk());
         auto& stream = stream_result.Value();
         EXPECT_TRUE(stream->IsOpen());
-        stream->SendAll("hello");
+        ASSERT_TRUE(stream->SendAll("hello").IsOk());
         stream->Close();
     });
 

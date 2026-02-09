@@ -75,7 +75,7 @@ class AsyncEvent {
     // Public API
     // ========================================================================
 
-    WaitAwaitable Wait() { return WaitAwaitable(*this); }
+    [[nodiscard]] WaitAwaitable Wait() { return WaitAwaitable(*this); }
 
     // Set the event, resuming all current waiters.
     // Future co_await Wait() calls will pass through immediately.

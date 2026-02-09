@@ -52,31 +52,32 @@ class SyncTcpStream {
     // ========================================================================
 
     // Connect to a server (blocking)
-    static Result<std::unique_ptr<SyncTcpStream>, std::error_code> Connect(const std::string& host, uint16_t port);
+    [[nodiscard]] static Result<std::unique_ptr<SyncTcpStream>, std::error_code> Connect(const std::string& host,
+                                                                                         uint16_t port);
 
     // ========================================================================
     // Data Transfer
     // ========================================================================
 
     // Send data (blocking, returns bytes sent)
-    Result<ssize_t, std::error_code> Send(std::string_view data);
+    [[nodiscard]] Result<ssize_t, std::error_code> Send(std::string_view data);
 
     // Send all data (blocking)
-    Result<void, std::error_code> SendAll(std::string_view data);
+    [[nodiscard]] Result<void, std::error_code> SendAll(std::string_view data);
 
     // Receive up to max_bytes (blocking)
-    Result<std::vector<char>, std::error_code> Recv(size_t max_bytes = 4096);
+    [[nodiscard]] Result<std::vector<char>, std::error_code> Recv(size_t max_bytes = 4096);
 
     // Receive exactly n bytes (blocking)
-    Result<std::string, std::error_code> RecvExact(size_t n);
+    [[nodiscard]] Result<std::string, std::error_code> RecvExact(size_t n);
 
     // ========================================================================
     // Connection Management
     // ========================================================================
 
     void Close();
-    bool IsOpen() const { return fd_ >= 0; }
-    int GetFd() const { return fd_; }
+    [[nodiscard]] bool IsOpen() const { return fd_ >= 0; }
+    [[nodiscard]] int GetFd() const { return fd_; }
 
    private:
     friend class SyncTcpListener;
@@ -105,22 +106,23 @@ class SyncTcpListener {
     // ========================================================================
 
     // Create a listening socket
-    static Result<std::unique_ptr<SyncTcpListener>, std::error_code> Listen(const std::string& host, uint16_t port,
-                                                                            int backlog = 128);
+    [[nodiscard]] static Result<std::unique_ptr<SyncTcpListener>, std::error_code> Listen(const std::string& host,
+                                                                                          uint16_t port,
+                                                                                          int backlog = 128);
 
     // ========================================================================
     // Accept
     // ========================================================================
 
     // Accept a connection (blocking)
-    Result<std::unique_ptr<SyncTcpStream>, std::error_code> Accept();
+    [[nodiscard]] Result<std::unique_ptr<SyncTcpStream>, std::error_code> Accept();
 
     // ========================================================================
     // Properties
     // ========================================================================
 
-    uint16_t GetPort() const { return port_; }
-    int GetFd() const { return fd_; }
+    [[nodiscard]] uint16_t GetPort() const { return port_; }
+    [[nodiscard]] int GetFd() const { return fd_; }
 
    private:
     SyncTcpListener() = default;

@@ -123,9 +123,9 @@ class AsyncMutex {
     // Public API
     // ========================================================================
 
-    LockAwaitable Lock() { return LockAwaitable(*this); }
+    [[nodiscard]] LockAwaitable Lock() { return LockAwaitable(*this); }
 
-    TryLockAwaitable TryLock() { return TryLockAwaitable(*this); }
+    [[nodiscard]] TryLockAwaitable TryLock() { return TryLockAwaitable(*this); }
 
    private:
     void Unlock() {

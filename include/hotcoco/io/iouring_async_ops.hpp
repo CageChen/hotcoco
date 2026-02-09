@@ -82,8 +82,8 @@ class IoUringAcceptAwaitable {
     IoUringExecutor::OpContext ctx_{IoUringExecutor::OpType::IO, nullptr, 0, {}};
 };
 
-inline IoUringAcceptAwaitable IoUringAccept(int listen_fd, struct sockaddr* addr = nullptr,
-                                            socklen_t* addrlen = nullptr, int flags = 0) {
+[[nodiscard]] inline IoUringAcceptAwaitable IoUringAccept(int listen_fd, struct sockaddr* addr = nullptr,
+                                                          socklen_t* addrlen = nullptr, int flags = 0) {
     return IoUringAcceptAwaitable(listen_fd, addr, addrlen, flags);
 }
 
@@ -132,7 +132,7 @@ class IoUringConnectAwaitable {
     IoUringExecutor::OpContext ctx_{IoUringExecutor::OpType::IO, nullptr, 0, {}};
 };
 
-inline IoUringConnectAwaitable IoUringConnect(int fd, const struct sockaddr* addr, socklen_t addrlen) {
+[[nodiscard]] inline IoUringConnectAwaitable IoUringConnect(int fd, const struct sockaddr* addr, socklen_t addrlen) {
     return IoUringConnectAwaitable(fd, addr, addrlen);
 }
 
@@ -181,7 +181,7 @@ class IoUringRecvAwaitable {
     IoUringExecutor::OpContext ctx_{IoUringExecutor::OpType::IO, nullptr, 0, {}};
 };
 
-inline IoUringRecvAwaitable IoUringRecv(int fd, void* buf, size_t len, int flags = 0) {
+[[nodiscard]] inline IoUringRecvAwaitable IoUringRecv(int fd, void* buf, size_t len, int flags = 0) {
     return IoUringRecvAwaitable(fd, buf, len, flags);
 }
 
@@ -231,7 +231,7 @@ class IoUringSendAwaitable {
     IoUringExecutor::OpContext ctx_{IoUringExecutor::OpType::IO, nullptr, 0, {}};
 };
 
-inline IoUringSendAwaitable IoUringSend(int fd, const void* buf, size_t len, int flags = MSG_NOSIGNAL) {
+[[nodiscard]] inline IoUringSendAwaitable IoUringSend(int fd, const void* buf, size_t len, int flags = MSG_NOSIGNAL) {
     return IoUringSendAwaitable(fd, buf, len, flags);
 }
 

@@ -45,7 +45,7 @@ namespace hotcoco {
 class LibuvExecutor : public Executor {
    public:
     // Factory method — returns an error if libuv initialization fails.
-    static Result<std::unique_ptr<LibuvExecutor>, std::error_code> Create();
+    [[nodiscard]] static Result<std::unique_ptr<LibuvExecutor>, std::error_code> Create();
 
     ~LibuvExecutor() override;
 
@@ -60,14 +60,14 @@ class LibuvExecutor : public Executor {
     void Run() override;
     void RunOnce() override;
     void Stop() override;
-    bool IsRunning() const override;
+    [[nodiscard]] bool IsRunning() const override;
 
     void Schedule(std::coroutine_handle<> handle) override;
     void ScheduleAfter(std::chrono::milliseconds delay, std::coroutine_handle<> handle) override;
     void Post(std::function<void()> callback) override;
 
     // Access the underlying libuv loop (for TCP, etc.)
-    uv_loop_t* GetLoop() { return &loop_; }
+    [[nodiscard]] uv_loop_t* GetLoop() { return &loop_; }
 
    private:
     // Private constructor — use Create() factory method

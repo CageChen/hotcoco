@@ -72,11 +72,11 @@ class HttpRequest {
     int http_minor = 1;
 
     // Helper methods
-    std::string GetHeader(const std::string& name) const;
-    bool HasHeader(const std::string& name) const;
+    [[nodiscard]] std::string GetHeader(const std::string& name) const;
+    [[nodiscard]] bool HasHeader(const std::string& name) const;
 
     // HTTP/1.0 defaults to close; HTTP/1.1 defaults to keep-alive
-    bool ShouldKeepAlive() const;
+    [[nodiscard]] bool ShouldKeepAlive() const;
 };
 
 // ============================================================================
@@ -90,18 +90,18 @@ class HttpResponse {
     std::string body;
 
     // Factory methods for common responses
-    static HttpResponse Ok(const std::string& body = "", const std::string& content_type = "text/plain");
-    static HttpResponse Html(const std::string& html);
-    static HttpResponse Json(const std::string& json);
-    static HttpResponse NotFound(const std::string& message = "Not Found");
-    static HttpResponse BadRequest(const std::string& message = "Bad Request");
-    static HttpResponse InternalError(const std::string& message = "Internal Server Error");
+    [[nodiscard]] static HttpResponse Ok(const std::string& body = "", const std::string& content_type = "text/plain");
+    [[nodiscard]] static HttpResponse Html(const std::string& html);
+    [[nodiscard]] static HttpResponse Json(const std::string& json);
+    [[nodiscard]] static HttpResponse NotFound(const std::string& message = "Not Found");
+    [[nodiscard]] static HttpResponse BadRequest(const std::string& message = "Bad Request");
+    [[nodiscard]] static HttpResponse InternalError(const std::string& message = "Internal Server Error");
 
     // Set a header
     HttpResponse& SetHeader(const std::string& name, const std::string& value);
 
     // Serialize to HTTP wire format
-    std::string Serialize() const;
+    [[nodiscard]] std::string Serialize() const;
 };
 
 // ============================================================================
@@ -118,17 +118,17 @@ class HttpParser {
     ~HttpParser();
 
     // Parse incoming data, returns true when complete request is ready
-    bool Parse(const char* data, size_t len);
+    [[nodiscard]] bool Parse(const char* data, size_t len);
 
     // Get the parsed request (valid after Parse returns true)
-    HttpRequest GetRequest();
+    [[nodiscard]] HttpRequest GetRequest();
 
     // Reset parser for next request
     void Reset();
 
     // Check if an error occurred
-    bool HasError() const { return error_; }
-    std::string GetError() const { return error_message_; }
+    [[nodiscard]] bool HasError() const { return error_; }
+    [[nodiscard]] std::string GetError() const { return error_message_; }
 
    private:
     // llhttp callbacks

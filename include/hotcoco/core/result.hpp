@@ -95,7 +95,7 @@ inline OkTag<Unit> Ok() {
 // Result<T, E> - Success or Error
 // ============================================================================
 template <typename T, typename E>
-class Result {
+class [[nodiscard("Result must be inspected for errors")]] Result {
    public:
     // ========================================================================
     // Construction
@@ -119,8 +119,8 @@ class Result {
     // Observers
     // ========================================================================
 
-    bool IsOk() const noexcept { return data_.index() == 0; }
-    bool IsErr() const noexcept { return data_.index() == 1; }
+    [[nodiscard]] bool IsOk() const noexcept { return data_.index() == 0; }
+    [[nodiscard]] bool IsErr() const noexcept { return data_.index() == 1; }
 
     explicit operator bool() const noexcept { return IsOk(); }
 
@@ -129,14 +129,14 @@ class Result {
     // ========================================================================
 
     // Get value (undefined behavior if IsErr())
-    T& Value() & { return std::get<0>(data_); }
-    const T& Value() const& { return std::get<0>(data_); }
-    T&& Value() && { return std::get<0>(std::move(data_)); }
+    [[nodiscard]] T& Value() & { return std::get<0>(data_); }
+    [[nodiscard]] const T& Value() const& { return std::get<0>(data_); }
+    [[nodiscard]] T&& Value() && { return std::get<0>(std::move(data_)); }
 
     // Get error (undefined behavior if IsOk())
-    E& Error() & { return std::get<1>(data_); }
-    const E& Error() const& { return std::get<1>(data_); }
-    E&& Error() && { return std::get<1>(std::move(data_)); }
+    [[nodiscard]] E& Error() & { return std::get<1>(data_); }
+    [[nodiscard]] const E& Error() const& { return std::get<1>(data_); }
+    [[nodiscard]] E&& Error() && { return std::get<1>(std::move(data_)); }
 
     // Safe accessors
     std::optional<T> ValueOr() const {
@@ -207,21 +207,21 @@ class Result {
 // For operations that succeed without a value
 
 template <typename E>
-class Result<void, E> {
+class [[nodiscard("Result must be inspected for errors")]] Result<void, E> {
    public:
     Result(OkTag<Unit>&&) : error_(std::nullopt) {}
 
     template <typename U>
     Result(ErrTag<U>&& err) : error_(std::move(err.error)) {}
 
-    bool IsOk() const noexcept { return !error_.has_value(); }
-    bool IsErr() const noexcept { return error_.has_value(); }
+    [[nodiscard]] bool IsOk() const noexcept { return !error_.has_value(); }
+    [[nodiscard]] bool IsErr() const noexcept { return error_.has_value(); }
 
     explicit operator bool() const noexcept { return IsOk(); }
 
-    E& Error() & { return *error_; }
-    const E& Error() const& { return *error_; }
-    E&& Error() && { return std::move(*error_); }
+    [[nodiscard]] E& Error() & { return *error_; }
+    [[nodiscard]] const E& Error() const& { return *error_; }
+    [[nodiscard]] E&& Error() && { return std::move(*error_); }
 
    private:
     std::optional<E> error_;

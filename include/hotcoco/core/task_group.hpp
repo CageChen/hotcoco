@@ -75,7 +75,7 @@ class TaskGroup {
     // ========================================================================
     // Awaitable interface - co_await group waits for all tasks
     // ========================================================================
-    auto operator co_await() { return shared_->event.Wait(); }
+    [[nodiscard]] auto operator co_await() { return shared_->event.Wait(); }
 
     // ========================================================================
     // Query

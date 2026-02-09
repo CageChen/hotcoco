@@ -72,7 +72,7 @@ class FramePool {
     }
 
     // Allocate a frame of the given size
-    static void* Allocate(size_t size) {
+    [[nodiscard]] static void* Allocate(size_t size) {
 #if HOTCOCO_ASAN_ACTIVE
         return ::operator new(size);
 #else
@@ -98,7 +98,7 @@ class FramePool {
         size_t oversized_allocations = 0;
     };
 
-    static Stats GetStats() { return Instance().stats_; }
+    [[nodiscard]] static Stats GetStats() { return Instance().stats_; }
 
     static void ResetStats() { Instance().stats_ = Stats{}; }
 

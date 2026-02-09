@@ -128,7 +128,7 @@ DetachedTask MakeWhenAnyController(std::vector<Task<T>> user_tasks, std::shared_
 // ============================================================================
 
 template <typename T>
-Task<Result<WhenAnyResult<T>, std::error_code>> WhenAny(std::vector<Task<T>> tasks) {
+[[nodiscard]] Task<Result<WhenAnyResult<T>, std::error_code>> WhenAny(std::vector<Task<T>> tasks) {
     if (tasks.empty()) {
         co_return Err(make_error_code(Errc::InvalidArgument));
     }
@@ -149,7 +149,7 @@ Task<Result<WhenAnyResult<T>, std::error_code>> WhenAny(std::vector<Task<T>> tas
 
 template <typename T, typename... Rest>
     requires(std::same_as<T, Rest> && ...)
-Task<Result<WhenAnyResult<T>, std::error_code>> WhenAny(Task<T> first, Task<Rest>... rest) {
+[[nodiscard]] Task<Result<WhenAnyResult<T>, std::error_code>> WhenAny(Task<T> first, Task<Rest>... rest) {
     std::vector<Task<T>> tasks;
     tasks.reserve(1 + sizeof...(Rest));
     tasks.push_back(std::move(first));

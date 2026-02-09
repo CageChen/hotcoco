@@ -47,7 +47,7 @@ namespace hotcoco {
 // Non-void input task
 template <typename T, typename F>
     requires std::invocable<F, T>
-Task<std::invoke_result_t<F, T>> Then(Task<T> task, F func) {
+[[nodiscard]] Task<std::invoke_result_t<F, T>> Then(Task<T> task, F func) {
     using ResultT = std::invoke_result_t<F, T>;
 
     // Await the input task
@@ -65,7 +65,7 @@ Task<std::invoke_result_t<F, T>> Then(Task<T> task, F func) {
 // Void input task - function takes no arguments
 template <typename F>
     requires std::invocable<F>
-Task<std::invoke_result_t<F>> Then(Task<void> task, F func) {
+[[nodiscard]] Task<std::invoke_result_t<F>> Then(Task<void> task, F func) {
     using ResultT = std::invoke_result_t<F>;
 
     // Await the input task
@@ -87,7 +87,7 @@ Task<std::invoke_result_t<F>> Then(Task<void> task, F func) {
 //
 template <typename T, typename F>
     requires std::invocable<F, T>
-auto Map(Task<T> task, F func) {
+[[nodiscard]] auto Map(Task<T> task, F func) {
     return Then(std::move(task), std::move(func));
 }
 

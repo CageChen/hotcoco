@@ -133,7 +133,7 @@ TEST(FramePoolTest, PoolLimitRespected) {
     FramePool::ResetStats();
 
     for (size_t i = 0; i < FramePool::kMaxPooledPerBucket; i++) {
-        FramePool::Allocate(64);
+        (void)FramePool::Allocate(64);
     }
 
     auto stats = FramePool::GetStats();

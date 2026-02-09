@@ -154,7 +154,7 @@ class CancellationToken {
     bool IsValid() const noexcept { return state_ != nullptr; }
 
     // Create a "never cancelled" token
-    static CancellationToken None() { return CancellationToken{}; }
+    [[nodiscard]] static CancellationToken None() { return CancellationToken{}; }
 
    private:
     friend class CancellationSource;
@@ -178,7 +178,7 @@ class CancellationSource {
     CancellationSource& operator=(CancellationSource&&) = default;
 
     // Get a token that can be passed to coroutines
-    CancellationToken GetToken() const { return CancellationToken(state_); }
+    [[nodiscard]] CancellationToken GetToken() const { return CancellationToken(state_); }
 
     // Request cancellation
     void Cancel() {

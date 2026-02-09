@@ -201,7 +201,7 @@ class GeneratorIterator {
 // begin()/end() for range-for compatibility and manages the coroutine lifetime.
 //
 template <typename T>
-class Generator {
+class [[nodiscard("Generator must be iterated")]] Generator {
    public:
     using promise_type = GeneratorPromise<T>;
     using Handle = std::coroutine_handle<promise_type>;

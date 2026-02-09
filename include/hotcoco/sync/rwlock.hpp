@@ -161,9 +161,9 @@ class AsyncRWLock {
     // Public API
     // ========================================================================
 
-    ReadLockAwaitable ReadLock() { return ReadLockAwaitable(*this); }
+    [[nodiscard]] ReadLockAwaitable ReadLock() { return ReadLockAwaitable(*this); }
 
-    WriteLockAwaitable WriteLock() { return WriteLockAwaitable(*this); }
+    [[nodiscard]] WriteLockAwaitable WriteLock() { return WriteLockAwaitable(*this); }
 
    private:
     void ReadUnlock() {

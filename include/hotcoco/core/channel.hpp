@@ -16,8 +16,9 @@
 
 #pragma once
 
+#include "hotcoco/core/check.hpp"
+
 #include <atomic>
-#include <cassert>
 #include <coroutine>
 #include <deque>
 #include <mutex>
@@ -30,7 +31,7 @@ template <typename T>
 class Channel {
    public:
     explicit Channel(size_t capacity = 1) : capacity_(capacity) {
-        assert(capacity >= 1 && "Channel capacity must be at least 1");
+        HOTCOCO_CHECK(capacity >= 1, "Channel capacity must be at least 1");
     }
 
     ~Channel() {
@@ -199,9 +200,9 @@ class Channel {
     // Public API
     // ========================================================================
 
-    SendAwaitable Send(T value) { return SendAwaitable(*this, std::move(value)); }
+    [[nodiscard]] SendAwaitable Send(T value) { return SendAwaitable(*this, std::move(value)); }
 
-    ReceiveAwaitable Receive() { return ReceiveAwaitable(*this); }
+    [[nodiscard]] ReceiveAwaitable Receive() { return ReceiveAwaitable(*this); }
 
     void Close() {
         std::vector<std::coroutine_handle<>> to_wake;

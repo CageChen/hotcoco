@@ -96,7 +96,7 @@ class AsyncSemaphore {
 
     explicit AsyncSemaphore(size_t initial_count) : count_(initial_count) {}
 
-    AcquireAwaitable Acquire() { return AcquireAwaitable(*this); }
+    [[nodiscard]] AcquireAwaitable Acquire() { return AcquireAwaitable(*this); }
 
     void Release() {
         std::coroutine_handle<> to_wake;

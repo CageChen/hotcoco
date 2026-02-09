@@ -81,7 +81,7 @@ class PeriodicTimer {
         PeriodicTimer& timer_;
     };
 
-    WaitAwaitable Wait() { return WaitAwaitable(*this); }
+    [[nodiscard]] WaitAwaitable Wait() { return WaitAwaitable(*this); }
 
     void Stop() {
         if (running_) {
