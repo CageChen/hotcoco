@@ -2,35 +2,35 @@
 // Core Primitives Benchmarks
 // ============================================================================
 //
-// Baseline results (2026-02-08, GCC Release, AMD Ryzen 9 9950X 16C/32T @ 6.0GHz):
+// Baseline results (2026-02-10, GCC Release, AMD Ryzen 9 9950X 16C/32T @ 6.0GHz, FramePool enabled):
 //
 //   Benchmark                          Time        CPU      Iterations
 //   -----------------------------------------------------------------
-//   BM_TaskCreate                     5.38 ns     5.38 ns   129041452
-//   BM_TaskSyncWait                   23.3 ns     23.3 ns    29960504
-//   BM_TaskChainedAwait               48.9 ns     48.9 ns    14166319
-//   BM_GeneratorIterate/10            17.7 ns     17.7 ns    40729117  564M items/s
-//   BM_GeneratorIterate/64             114 ns      114 ns     5932432  561M items/s
-//   BM_GeneratorIterate/512            762 ns      762 ns      924026  672M items/s
-//   BM_GeneratorIterate/4096          5967 ns     5967 ns      117810  686M items/s
-//   BM_GeneratorIterate/10000        14530 ns    14529 ns       48518  688M items/s
+//   BM_TaskCreate                     2.51 ns     2.51 ns   279773727
+//   BM_TaskSyncWait                   19.0 ns     19.0 ns    36919320
+//   BM_TaskChainedAwait               39.9 ns     39.9 ns    17445639
+//   BM_GeneratorIterate/10            15.3 ns     15.3 ns    45839436  655M items/s
+//   BM_GeneratorIterate/64             114 ns      114 ns     6396331  563M items/s
+//   BM_GeneratorIterate/512            774 ns      774 ns      903302  662M items/s
+//   BM_GeneratorIterate/4096          6056 ns     6055 ns      115681  676M items/s
+//   BM_GeneratorIterate/10000        14789 ns    14788 ns       47527  676M items/s
 //   BM_RawFunctionCall                0.087 ns   0.087 ns  1000000000
-//   BM_TaskFunctionCall               23.9 ns     23.9 ns    29255558
+//   BM_TaskFunctionCall               19.0 ns     19.0 ns    37065672
 //   BM_ResultOkCreate                0.178 ns    0.178 ns  1000000000
 //   BM_ResultErrCreate               0.265 ns    0.265 ns  1000000000
 //   BM_ResultMap                     0.177 ns    0.177 ns  1000000000
 //   BM_ResultAndThen                 0.178 ns    0.178 ns  1000000000
-//   BM_WhenAllVariadic                88.0 ns     88.0 ns     7939150
-//   BM_WhenAllVector/2                92.6 ns     92.6 ns     7569510
-//   BM_WhenAllVector/8                 240 ns      240 ns     2943629
-//   BM_WhenAllVector/64               1390 ns     1390 ns      501021
-//   BM_WhenAllVector/256              9890 ns     9889 ns       70803
-//   BM_WhenAnyVariadic                 152 ns      152 ns     4617499
-//   BM_WhenAnyVector/2                 147 ns      147 ns     4731955
-//   BM_WhenAnyVector/8                 373 ns      373 ns     1879308
-//   BM_WhenAnyVector/64               2283 ns     2283 ns      304062
-//   BM_WhenAnyVector/256             14135 ns    14135 ns       49291
-//   BM_SpawnAndComplete                513 ns      513 ns     1293716
+//   BM_WhenAllVariadic                65.4 ns     65.4 ns    10729249
+//   BM_WhenAllVector/2                77.8 ns     77.8 ns     8991628
+//   BM_WhenAllVector/8                 151 ns      151 ns     4635773
+//   BM_WhenAllVector/64                852 ns      852 ns      817749
+//   BM_WhenAllVector/256              7949 ns     7948 ns       88397
+//   BM_WhenAnyVariadic                 136 ns      136 ns     5169281
+//   BM_WhenAnyVector/2                 131 ns      131 ns     5361361
+//   BM_WhenAnyVector/8                 274 ns      274 ns     2557186
+//   BM_WhenAnyVector/64               1919 ns     1919 ns      360300
+//   BM_WhenAnyVector/256             13855 ns    13853 ns       50664
+//   BM_SpawnAndComplete                534 ns      534 ns     1298760
 //
 // ============================================================================
 

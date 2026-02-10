@@ -28,6 +28,7 @@
 #pragma once
 
 #include "hotcoco/core/error.hpp"
+#include "hotcoco/core/frame_pool.hpp"
 #include "hotcoco/core/task.hpp"
 #include "hotcoco/io/executor.hpp"
 
@@ -229,7 +230,7 @@ class SpawnHandle<void> {
 template <typename T>
 class SpawnedTask {
    public:
-    struct promise_type {
+    struct promise_type : PooledPromise {
         std::shared_ptr<SpawnState<T>> state;
 
         SpawnedTask get_return_object() {
@@ -304,7 +305,7 @@ class SpawnedTask {
 template <>
 class SpawnedTask<void> {
    public:
-    struct promise_type {
+    struct promise_type : PooledPromise {
         std::shared_ptr<SpawnState<void>> state;
 
         SpawnedTask get_return_object() {

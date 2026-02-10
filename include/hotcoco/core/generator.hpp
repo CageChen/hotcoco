@@ -42,6 +42,8 @@
 
 #pragma once
 
+#include "hotcoco/core/frame_pool.hpp"
+
 #include <coroutine>
 #include <cstdlib>
 #include <iterator>
@@ -62,7 +64,7 @@ class Generator;
 // value and any exception that occurred.
 //
 template <typename T>
-class GeneratorPromise {
+class GeneratorPromise : public PooledPromise {
    public:
     using value_type = std::remove_reference_t<T>;
     using reference = value_type&;

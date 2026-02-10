@@ -29,6 +29,7 @@
 
 #pragma once
 
+#include "hotcoco/core/frame_pool.hpp"
 #include "hotcoco/core/task.hpp"
 
 #include <atomic>
@@ -80,7 +81,7 @@ template <typename T>
 class WhenAllTask;
 
 template <typename T>
-class WhenAllTaskPromise {
+class WhenAllTaskPromise : public PooledPromise {
    public:
     WhenAllTask<T> get_return_object() noexcept;
 
@@ -110,7 +111,7 @@ class WhenAllTaskPromise {
 };
 
 template <>
-class WhenAllTaskPromise<void> {
+class WhenAllTaskPromise<void> : public PooledPromise {
    public:
     WhenAllTask<void> get_return_object() noexcept;
 

@@ -41,6 +41,7 @@
 
 #include "hotcoco/core/check.hpp"
 #include "hotcoco/core/coroutine_compat.hpp"
+#include "hotcoco/core/frame_pool.hpp"
 
 #include <coroutine>
 #include <cstdlib>
@@ -66,7 +67,7 @@ class Task;
 // It exists from coroutine creation until the frame is destroyed.
 //
 template <typename T>
-class TaskPromise {
+class TaskPromise : public PooledPromise {
    public:
     // ========================================================================
     // CUSTOMIZATION POINT: get_return_object()
@@ -283,7 +284,7 @@ Task<T> TaskPromise<T>::get_return_object() noexcept {
 //
 
 template <>
-class TaskPromise<void> {
+class TaskPromise<void> : public PooledPromise {
    public:
     Task<void> get_return_object() noexcept;
 
