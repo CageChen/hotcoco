@@ -7,6 +7,7 @@
 //   Benchmark                              Time        CPU      Iterations
 //   ----------------------------------------------------------------------
 //   BM_MutexUncontended                   27.4 ns     27.4 ns    25643498
+//   BM_MutexUncontendedAmortized          5678 ns     5677 ns      122963  176M items/s
 //   BM_StdMutexUncontended                2.64 ns     2.64 ns   256230428
 //   BM_SemaphoreUncontended               30.3 ns     30.3 ns    23203750
 //   BM_ChannelSendReceive                 30.1 ns     30.1 ns    23208199
@@ -24,21 +25,20 @@
 //
 // ============================================================================
 
-#include <benchmark/benchmark.h>
-
-#include <shared_mutex>
-#include <thread>
-#include <vector>
-
-#include "hotcoco/core/task.hpp"
+#include "hotcoco/core/channel.hpp"
 #include "hotcoco/core/spawn.hpp"
-#include "hotcoco/sync/sync_wait.hpp"
+#include "hotcoco/core/task.hpp"
+#include "hotcoco/io/thread_pool_executor.hpp"
+#include "hotcoco/sync/latch.hpp"
 #include "hotcoco/sync/mutex.hpp"
 #include "hotcoco/sync/rwlock.hpp"
 #include "hotcoco/sync/semaphore.hpp"
-#include "hotcoco/sync/latch.hpp"
-#include "hotcoco/core/channel.hpp"
-#include "hotcoco/io/thread_pool_executor.hpp"
+#include "hotcoco/sync/sync_wait.hpp"
+
+#include <benchmark/benchmark.h>
+#include <shared_mutex>
+#include <thread>
+#include <vector>
 
 using namespace hotcoco;
 
@@ -49,7 +49,7 @@ using namespace hotcoco;
 // Uncontended mutex lock/unlock using guard
 static void BM_MutexUncontended(benchmark::State& state) {
     AsyncMutex mutex;
-    
+
     for (auto _ : state) {
         SyncWait([&mutex]() -> Task<void> {
             auto lock = co_await mutex.Lock();
@@ -60,10 +60,28 @@ static void BM_MutexUncontended(benchmark::State& state) {
 }
 BENCHMARK(BM_MutexUncontended);
 
+// Amortized lock/unlock cost: many iterations inside one SyncWait to remove
+// coroutine creation overhead from the measurement.
+static void BM_MutexUncontendedAmortized(benchmark::State& state) {
+    AsyncMutex mutex;
+    const int batch = 1000;
+
+    for (auto _ : state) {
+        SyncWait([&mutex, batch]() -> Task<void> {
+            for (int i = 0; i < batch; ++i) {
+                auto lock = co_await mutex.Lock();
+            }
+            co_return;
+        }());
+    }
+    state.SetItemsProcessed(state.iterations() * batch);
+}
+BENCHMARK(BM_MutexUncontendedAmortized);
+
 // std::mutex for comparison
 static void BM_StdMutexUncontended(benchmark::State& state) {
     std::mutex mutex;
-    
+
     for (auto _ : state) {
         std::lock_guard<std::mutex> lock(mutex);
         // Critical section
@@ -77,7 +95,7 @@ BENCHMARK(BM_StdMutexUncontended);
 
 static void BM_SemaphoreUncontended(benchmark::State& state) {
     AsyncSemaphore sem(1);
-    
+
     for (auto _ : state) {
         SyncWait([&sem]() -> Task<void> {
             co_await sem.Acquire();
@@ -94,7 +112,7 @@ BENCHMARK(BM_SemaphoreUncontended);
 
 static void BM_ChannelSendReceive(benchmark::State& state) {
     Channel<int> ch(1);
-    
+
     for (auto _ : state) {
         SyncWait([&ch]() -> Task<void> {
             co_await ch.Send(42);
@@ -110,7 +128,7 @@ BENCHMARK(BM_ChannelSendReceive);
 static void BM_ChannelBufferedThroughput(benchmark::State& state) {
     const int buffer_size = state.range(0);
     Channel<int> ch(buffer_size);
-    
+
     for (auto _ : state) {
         SyncWait([&ch, buffer_size]() -> Task<void> {
             // Fill buffer
@@ -136,12 +154,12 @@ BENCHMARK(BM_ChannelBufferedThroughput)->Range(1, 1024);
 static void BM_ThreadPoolSchedule(benchmark::State& state) {
     ThreadPoolExecutor executor(4);
     std::atomic<int> counter{0};
-    
+
     for (auto _ : state) {
         counter = 0;
         std::atomic<int> completed{0};
         const int num_tasks = 100;
-        
+
         for (int i = 0; i < num_tasks; ++i) {
             Spawn(executor, [&counter, &completed]() -> Task<void> {
                 counter++;
@@ -149,12 +167,12 @@ static void BM_ThreadPoolSchedule(benchmark::State& state) {
                 co_return;
             }());
         }
-        
+
         while (completed.load() < num_tasks) {
             std::this_thread::yield();
         }
     }
-    
+
     executor.Stop();
 }
 BENCHMARK(BM_ThreadPoolSchedule);
