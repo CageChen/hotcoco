@@ -41,6 +41,9 @@ option(ENABLE_UBSAN "Enable UndefinedBehaviorSanitizer" OFF)
 # io_uring option (Linux 5.1+ only)
 option(ENABLE_IOURING "Enable io_uring executor (Linux 5.1+)" ON)
 
+# P2300 std::execution adapter option
+option(ENABLE_STDEXEC "Enable P2300 std::execution adapters (requires stdexec)" OFF)
+
 # Allocator options
 option(USE_TCMALLOC "Use tcmalloc allocator" OFF)
 option(USE_JEMALLOC "Use jemalloc allocator" OFF)
@@ -129,6 +132,20 @@ if(ENABLE_IOURING AND CMAKE_SYSTEM_NAME STREQUAL "Linux")
     endif()
 endif()
 
+# stdexec (P2300 reference implementation)
+if(ENABLE_STDEXEC)
+    message(STATUS "Fetching stdexec (P2300 std::execution)...")
+    FetchContent_Declare(
+        stdexec
+        GIT_REPOSITORY https://github.com/NVIDIA/stdexec.git
+        GIT_TAG 624efd64005660aca0b88e6b39ac825a6dd6135d  # Pin to known-good version
+        GIT_SHALLOW TRUE
+    )
+    set(STDEXEC_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+    set(STDEXEC_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+    FetchContent_MakeAvailable(stdexec)
+endif()
+
 
 # ============================================================================
 # Main Library
@@ -173,6 +190,13 @@ if(HAVE_IOURING)
     target_link_libraries(hotcoco PUBLIC ${LIBURING_LIBRARIES})
     target_compile_definitions(hotcoco PUBLIC HOTCOCO_HAS_IOURING=1)
     message(STATUS "io_uring executor enabled")
+endif()
+
+# stdexec configuration
+if(ENABLE_STDEXEC)
+    target_link_libraries(hotcoco PUBLIC STDEXEC::stdexec)
+    target_compile_definitions(hotcoco PUBLIC HOTCOCO_HAS_STDEXEC=1)
+    message(STATUS "P2300 std::execution adapters enabled")
 endif()
 
 target_compile_options(hotcoco

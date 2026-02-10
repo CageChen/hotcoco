@@ -53,3 +53,15 @@ target_link_libraries(06_iouring_echo_server
     PRIVATE
         hotcoco
 )
+
+# stdexec bridge example (only when ENABLE_STDEXEC is ON)
+if(ENABLE_STDEXEC)
+    add_executable(07_stdexec_bridge
+        07_stdexec_bridge.cpp
+    )
+
+    target_link_libraries(07_stdexec_bridge
+        PRIVATE
+            hotcoco
+    )
+endif()

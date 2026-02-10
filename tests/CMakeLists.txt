@@ -9,6 +9,7 @@ add_executable(hotcoco_test
     detached_task_test.cpp
     error_test.cpp
     event_test.cpp
+    execution_test.cpp
     executor_test.cpp
     frame_pool_test.cpp
     generator_test.cpp

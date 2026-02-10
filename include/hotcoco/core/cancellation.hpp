@@ -72,6 +72,7 @@ class CancellationState {
         {
             std::lock_guard<std::mutex> lock(mutex_);
             callbacks_to_call = std::move(callbacks_);
+            callback_handles_.clear();
         }
 
         for (auto& callback : callbacks_to_call) {

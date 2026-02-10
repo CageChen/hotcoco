@@ -74,3 +74,11 @@
 #include "hotcoco/sync/rwlock.hpp"
 #include "hotcoco/sync/semaphore.hpp"
 #include "hotcoco/sync/sync_wait.hpp"
+
+// P2300 std::execution adapters (optional)
+#ifdef HOTCOCO_HAS_STDEXEC
+#include "hotcoco/execution/as_awaitable.hpp"
+#include "hotcoco/execution/scheduler.hpp"
+#include "hotcoco/execution/sender.hpp"
+#include "hotcoco/execution/stop_token_adapter.hpp"
+#endif
