@@ -5,6 +5,7 @@
 [![C++20](https://img.shields.io/badge/C%2B%2B-20-blue.svg)](https://en.cppreference.com/w/cpp/20)
 [![Linux](https://img.shields.io/badge/platform-Linux-green.svg)]()
 [![License: MIT](https://img.shields.io/badge/license-MIT-yellow.svg)](LICENSE)
+[![codecov](https://codecov.io/gh/CageChen/hotcoco/graph/badge.svg)](https://codecov.io/gh/CageChen/hotcoco)
 
 Hotcoco brings the ergonomics of modern async/await to C++20 with **zero exceptions**, **pluggable executors**, and **coroutine-native synchronization** — all in a single, well-documented library.
 

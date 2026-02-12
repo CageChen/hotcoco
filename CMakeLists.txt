@@ -38,6 +38,9 @@ option(ENABLE_ASAN "Enable AddressSanitizer" OFF)
 option(ENABLE_TSAN "Enable ThreadSanitizer" OFF)
 option(ENABLE_UBSAN "Enable UndefinedBehaviorSanitizer" OFF)
 
+# Coverage option
+option(ENABLE_COVERAGE "Enable code coverage (gcov)" OFF)
+
 # io_uring option (Linux 5.1+ only)
 option(ENABLE_IOURING "Enable io_uring executor (Linux 5.1+)" ON)
 
@@ -224,6 +227,15 @@ if(ENABLE_UBSAN)
     message(STATUS "UndefinedBehaviorSanitizer enabled")
     target_compile_options(hotcoco PUBLIC -fsanitize=undefined -g)
     target_link_options(hotcoco PUBLIC -fsanitize=undefined)
+endif()
+
+# ============================================================================
+# Coverage Configuration
+# ============================================================================
+if(ENABLE_COVERAGE)
+    message(STATUS "Code coverage enabled")
+    target_compile_options(hotcoco PUBLIC --coverage -fprofile-arcs -ftest-coverage)
+    target_link_options(hotcoco PUBLIC --coverage)
 endif()
 
 # ============================================================================

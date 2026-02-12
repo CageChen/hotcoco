@@ -1,8 +1,9 @@
-.PHONY: build test test-asan test-tsan test-all clean format check-format lint setup
+.PHONY: build test test-asan test-tsan test-all clean format check-format lint setup coverage
 
 BUILD_DIR       := build
 BUILD_ASAN_DIR  := build-asan
 BUILD_TSAN_DIR  := build-tsan
+BUILD_COV_DIR   := build-coverage
 NPROC           := $(shell nproc)
 
 # --- Default build (Release) ---
@@ -31,7 +32,7 @@ test-all: test test-asan test-tsan
 
 # --- Clean all build directories ---
 clean:
-	rm -rf $(BUILD_DIR) $(BUILD_ASAN_DIR) $(BUILD_TSAN_DIR)
+	rm -rf $(BUILD_DIR) $(BUILD_ASAN_DIR) $(BUILD_TSAN_DIR) $(BUILD_COV_DIR)
 
 # --- Format all source files in-place ---
 format:
@@ -48,3 +49,20 @@ lint: build
 # --- Set up local git hooks ---
 setup:
 	git config core.hooksPath .githooks
+
+# --- Coverage build, test, and report ---
+coverage:
+	cmake -B $(BUILD_COV_DIR) -G Ninja -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTS=ON -DENABLE_COVERAGE=ON
+	ninja -C $(BUILD_COV_DIR) -j$(NPROC)
+	ctest --test-dir $(BUILD_COV_DIR) --output-on-failure
+	lcov --capture --directory $(BUILD_COV_DIR) --output-file $(BUILD_COV_DIR)/coverage.info \
+	     --ignore-errors mismatch,negative
+	lcov --remove $(BUILD_COV_DIR)/coverage.info \
+	     '*/tests/*' '*/examples/*' '*/benchmarks/*' \
+	     '*/_deps/*' '*/usr/*' '*/googletest/*' \
+	     --output-file $(BUILD_COV_DIR)/coverage_filtered.info \
+	     --ignore-errors unused
+	genhtml $(BUILD_COV_DIR)/coverage_filtered.info \
+	        --output-directory $(BUILD_COV_DIR)/coverage-report \
+	        --title "Hotcoco Coverage" --legend
+	@echo "Coverage report: $(BUILD_COV_DIR)/coverage-report/index.html"

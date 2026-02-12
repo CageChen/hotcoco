@@ -21,6 +21,7 @@ make test           # Build + run all tests
 make test-asan      # ASan+UBSan build + test (build-asan/, Debug)
 make test-tsan      # TSan build + test (build-tsan/, Debug)
 make test-all       # Run test + test-asan + test-tsan sequentially
+make coverage       # Coverage build + test + lcov HTML report (build-coverage/)
 make clean          # Clean all build directories
 make format         # clang-format all source files
 make check-format   # Check formatting (CI, exits 1 on failure)
@@ -41,6 +42,7 @@ Key CMake options:
 | `BUILD_EXAMPLES` | ON | Build example programs |
 | `BUILD_BENCHMARKS` | OFF | Build benchmarks |
 | `ENABLE_IOURING` | ON | Enable io_uring executor |
+| `ENABLE_COVERAGE` | OFF | Code coverage (gcov + lcov) |
 | `ENABLE_ASAN` | OFF | AddressSanitizer |
 | `ENABLE_TSAN` | OFF | ThreadSanitizer |
 | `ENABLE_UBSAN` | OFF | UndefinedBehaviorSanitizer |
@@ -50,11 +52,12 @@ Key CMake options:
 - **Framework**: Google Test 1.14.0
 - **Test Files**: One `*_test.cpp` per component under `tests/`
 - **Executable**: `build/tests/hotcoco_test`
-- **CI**: GitHub Actions (`.github/workflows/ci.yml`) with 4 jobs:
+- **CI**: GitHub Actions (`.github/workflows/ci.yml`) with 5 jobs:
   - `build-and-test`: Release build + test
   - `asan`: ASan+UBSan build + test
   - `clang-tidy`: Static analysis
   - `format-check`: clang-format-19 formatting check
+  - `coverage`: gcov + lcov coverage report (uploaded as artifact)
 
 ## Code Style
 

@@ -71,3 +71,48 @@ jobs:
 
       - name: Check formatting
         run: find include src tests examples -name '*.cpp' -o -name '*.hpp' | xargs clang-format-19 --dry-run --Werror
+
+  coverage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: sudo apt-get update && sudo apt-get install -y ninja-build liburing-dev lcov
+
+      - name: Configure (Coverage)
+        run: cmake -B build-coverage -G Ninja -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTS=ON -DENABLE_COVERAGE=ON
+
+      - name: Build
+        run: ninja -C build-coverage -j$(nproc)
+
+      - name: Test
+        run: ctest --test-dir build-coverage --output-on-failure
+
+      - name: Collect coverage
+        run: |
+          lcov --capture --directory build-coverage --output-file build-coverage/coverage.info \
+               --ignore-errors mismatch,negative
+          lcov --remove build-coverage/coverage.info \
+               '*/tests/*' '*/examples/*' '*/benchmarks/*' \
+               '*/_deps/*' '*/usr/*' '*/googletest/*' \
+               --output-file build-coverage/coverage_filtered.info \
+               --ignore-errors unused
+          genhtml build-coverage/coverage_filtered.info \
+                  --output-directory build-coverage/coverage-report \
+                  --title "Hotcoco Coverage" --legend
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: build-coverage/coverage-report/
+
+      - name: Upload to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          files: build-coverage/coverage_filtered.info
+          fail_ci_if_error: false
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
