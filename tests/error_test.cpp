@@ -72,3 +72,9 @@ TEST(ErrorTest, DefaultErrorCodeIsFalsy) {
     std::error_code ec;
     EXPECT_FALSE(static_cast<bool>(ec));
 }
+
+TEST(ErrorTest, UnknownErrorCodeMessage) {
+    // Cast an out-of-range value to Errc to exercise the default branch
+    std::error_code ec = make_error_code(static_cast<Errc>(9999));
+    EXPECT_EQ(ec.message(), "Unknown hotcoco error");
+}

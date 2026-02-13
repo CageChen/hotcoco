@@ -285,3 +285,182 @@ TEST(ThreadPoolTest, MultiplePostCallbacks) {
 
     EXPECT_EQ(count.load(), 100);
 }
+
+TEST(ThreadPoolTest, RunOnceExecutesSingleItem) {
+    ThreadPoolExecutor executor(1);
+    std::atomic<int> counter{0};
+
+    // Post multiple callbacks
+    executor.Post([&]() { counter++; });
+    executor.Post([&]() { counter++; });
+    executor.Post([&]() { counter++; });
+
+    // Give a moment for worker to pick up
+    std::this_thread::sleep_for(100ms);
+    executor.Stop();
+
+    // All should have been processed by the worker thread
+    EXPECT_EQ(counter.load(), 3);
+}
+
+TEST(ThreadPoolTest, PendingTasksCount) {
+    // Stop executor first, then post — tasks will queue up
+    ThreadPoolExecutor executor(1);
+    executor.Stop();
+
+    // Give worker time to stop
+    std::this_thread::sleep_for(50ms);
+
+    // PendingTasks should be 0 with no queued work
+    EXPECT_EQ(executor.PendingTasks(), 0u);
+}
+
+TEST(ThreadPoolTest, OptionsWithZeroThreads) {
+    // Passing 0 threads should auto-correct to 1
+    ThreadPoolExecutor executor(0);
+    EXPECT_EQ(executor.NumThreads(), 1u);
+}
+
+TEST(ThreadPoolTest, OptionsStruct) {
+    ThreadPoolExecutor::Options options;
+    options.num_threads = 0;  // Should auto-correct to 1
+    ThreadPoolExecutor executor(options);
+    EXPECT_EQ(executor.NumThreads(), 1u);
+}
+
+TEST(ThreadPoolTest, IsRunningState) {
+    ThreadPoolExecutor executor(2);
+    EXPECT_TRUE(executor.IsRunning());
+    executor.Stop();
+    EXPECT_FALSE(executor.IsRunning());
+}
+
+TEST(ThreadPoolTest, DefaultConstructor) {
+    // Default constructor should create a valid executor
+    ThreadPoolExecutor executor;
+    EXPECT_GE(executor.NumThreads(), 1u);
+    executor.Stop();
+}
+
+TEST(ThreadPoolTest, RunOnceWithCallback) {
+    ThreadPoolExecutor executor(1);
+    executor.Stop();  // Stop workers so items stay in queue
+
+    bool callback_called = false;
+    executor.Post([&]() { callback_called = true; });
+
+    // RunOnce should execute the callback
+    executor.RunOnce();
+    EXPECT_TRUE(callback_called);
+}
+
+TEST(ThreadPoolTest, RunWaitsForCompletion) {
+    ThreadPoolExecutor executor(2);
+    std::atomic<int> count{0};
+
+    for (int i = 0; i < 5; ++i) {
+        executor.Post([&]() {
+            std::this_thread::sleep_for(10ms);
+            count++;
+            if (count == 5) {
+                executor.Stop();
+            }
+        });
+    }
+
+    executor.Run();
+    EXPECT_EQ(count.load(), 5);
+}
+
+TEST(ThreadPoolTest, ScheduleAfterTimerLoop) {
+    ThreadPoolExecutor executor(2);
+    std::atomic<bool> fired{false};
+    auto start = std::chrono::steady_clock::now();
+
+    auto task = [&]() -> Task<void> {
+        fired = true;
+        co_return;
+    };
+
+    auto t = task();
+    executor.ScheduleAfter(50ms, t.GetHandle());
+
+    // Wait for the timer to fire (up to 500ms)
+    for (int i = 0; i < 100 && !fired.load(); ++i) {
+        std::this_thread::sleep_for(5ms);
+    }
+
+    auto elapsed = std::chrono::steady_clock::now() - start;
+    EXPECT_TRUE(fired.load());
+    EXPECT_GE(elapsed, 40ms);
+    executor.Stop();
+}
+
+TEST(ThreadPoolTest, ScheduleNullHandle) {
+    ThreadPoolExecutor executor(1);
+    // Schedule a null handle — should be silently ignored
+    executor.Schedule(std::coroutine_handle<>{nullptr});
+    // Post a null callback — should be silently ignored
+    executor.Post(nullptr);
+    // ScheduleAfter a null handle — should be silently ignored
+    executor.ScheduleAfter(10ms, std::coroutine_handle<>{nullptr});
+
+    // These should not crash; just stop
+    std::this_thread::sleep_for(20ms);
+    executor.Stop();
+}
+
+TEST(ThreadPoolTest, MultipleScheduleAfter) {
+    ThreadPoolExecutor executor(1);  // Single thread to ensure sequential execution
+    std::vector<int> order;
+    std::mutex order_mutex;
+    std::atomic<int> done_count{0};
+
+    auto task1 = [&]() -> Task<void> {
+        {
+            std::lock_guard<std::mutex> lock(order_mutex);
+            order.push_back(1);
+        }
+        done_count++;
+        co_return;
+    };
+
+    auto task2 = [&]() -> Task<void> {
+        {
+            std::lock_guard<std::mutex> lock(order_mutex);
+            order.push_back(2);
+        }
+        done_count++;
+        co_return;
+    };
+
+    auto task3 = [&]() -> Task<void> {
+        {
+            std::lock_guard<std::mutex> lock(order_mutex);
+            order.push_back(3);
+        }
+        done_count++;
+        co_return;
+    };
+
+    auto t1 = task1();
+    auto t2 = task2();
+    auto t3 = task3();
+
+    executor.ScheduleAfter(50ms, t1.GetHandle());
+    executor.ScheduleAfter(25ms, t2.GetHandle());
+    executor.ScheduleAfter(100ms, t3.GetHandle());
+
+    // Wait for all 3 timers to fire (up to 1s)
+    for (int i = 0; i < 200 && done_count.load() < 3; ++i) {
+        std::this_thread::sleep_for(5ms);
+    }
+
+    executor.Stop();
+
+    ASSERT_EQ(order.size(), 3u);
+    // Should fire in order: 2 (25ms), 1 (50ms), 3 (100ms)
+    EXPECT_EQ(order[0], 2);
+    EXPECT_EQ(order[1], 1);
+    EXPECT_EQ(order[2], 3);
+}

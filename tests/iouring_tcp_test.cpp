@@ -785,4 +785,86 @@ TEST(IoUringTcpTest, ReadOnExplicitlyClosedStream) {
     EXPECT_TRUE(read_empty);
 }
 
+// ============================================================================
+// Additional coverage tests
+// ============================================================================
+
+TEST(IoUringTcpTest, ListenOnUnboundListenerReturnsError) {
+    auto res = IoUringExecutor::Create();
+    ASSERT_TRUE(res.IsOk());
+    auto& executor = *res.Value();
+
+    IoUringTcpListener listener(executor);
+    // Listen without Bind — should fail with -EBADF
+    EXPECT_EQ(listener.Listen(), -EBADF);
+}
+
+TEST(IoUringTcpTest, GetPortOnUnboundListenerReturnsZero) {
+    auto res = IoUringExecutor::Create();
+    ASSERT_TRUE(res.IsOk());
+    auto& executor = *res.Value();
+
+    IoUringTcpListener listener(executor);
+    // GetPort without Bind — should return 0
+    EXPECT_EQ(listener.GetPort(), 0);
+}
+
+TEST(IoUringTcpTest, DoubleConnectReturnsAlready) {
+    auto res = IoUringExecutor::Create();
+    ASSERT_TRUE(res.IsOk());
+    auto& executor = *res.Value();
+
+    IoUringTcpListener listener(executor);
+    ASSERT_EQ(listener.Bind("127.0.0.1", 0), 0);
+    ASSERT_EQ(listener.Listen(), 0);
+    uint16_t port = listener.GetPort();
+
+    int second_result = 0;
+
+    auto server_task = [&]() -> Task<void> {
+        auto stream = co_await listener.Accept();
+        co_await AsyncSleep(100ms);
+        executor.Stop();
+    };
+
+    auto client_task = [&]() -> Task<void> {
+        co_await AsyncSleep(20ms);
+        IoUringTcpStream client(executor);
+        int r = co_await client.Connect("127.0.0.1", port);
+        EXPECT_EQ(r, 0);
+
+        // Second Connect should fail with -EALREADY
+        second_result = co_await client.Connect("127.0.0.1", port);
+    };
+
+    auto st = server_task();
+    auto ct = client_task();
+    executor.Schedule(st.GetHandle());
+    executor.Schedule(ct.GetHandle());
+    executor.Run();
+
+    EXPECT_EQ(second_result, -EALREADY);
+}
+
+TEST(IoUringTcpTest, ConnectInvalidAddress) {
+    auto res = IoUringExecutor::Create();
+    ASSERT_TRUE(res.IsOk());
+    auto& executor = *res.Value();
+
+    int connect_result = 0;
+
+    auto task = [&]() -> Task<void> {
+        IoUringTcpStream client(executor);
+        // Invalid IP address string
+        connect_result = co_await client.Connect("not_an_ip", 80);
+        executor.Stop();
+    };
+
+    auto t = task();
+    executor.Schedule(t.GetHandle());
+    executor.Run();
+
+    EXPECT_EQ(connect_result, -EINVAL);
+}
+
 #endif  // HOTCOCO_HAS_IOURING

@@ -482,3 +482,98 @@ TEST(HttpTest, MultiValuedHeadersCombined) {
     ASSERT_NE(it, req.headers.end());
     EXPECT_EQ(it->second, "value1, value2");
 }
+
+// ============================================================================
+// HttpResponse Factory Tests
+// ============================================================================
+
+TEST(HttpTest, ResponseBadRequest) {
+    auto response = HttpResponse::BadRequest("Invalid input");
+    EXPECT_EQ(response.status_code, 400);
+    EXPECT_EQ(response.status_text, "Bad Request");
+    EXPECT_EQ(response.body, "Invalid input");
+    EXPECT_EQ(response.headers["Content-Type"], "text/plain");
+    EXPECT_EQ(response.headers["Content-Length"], "13");
+}
+
+TEST(HttpTest, ResponseInternalError) {
+    auto response = HttpResponse::InternalError("Something broke");
+    EXPECT_EQ(response.status_code, 500);
+    EXPECT_EQ(response.status_text, "Internal Server Error");
+    EXPECT_EQ(response.body, "Something broke");
+    EXPECT_EQ(response.headers["Content-Type"], "text/plain");
+}
+
+TEST(HttpTest, ResponseSetHeaderChaining) {
+    auto response = HttpResponse::Ok("body").SetHeader("X-Custom", "value1").SetHeader("X-Another", "value2");
+    EXPECT_EQ(response.headers["X-Custom"], "value1");
+    EXPECT_EQ(response.headers["X-Another"], "value2");
+    // Verify it's still a valid response
+    EXPECT_EQ(response.status_code, 200);
+    EXPECT_EQ(response.body, "body");
+}
+
+TEST(HttpTest, ResponseOkCustomContentType) {
+    auto response = HttpResponse::Ok("<xml/>", "application/xml");
+    EXPECT_EQ(response.headers["Content-Type"], "application/xml");
+    EXPECT_EQ(response.body, "<xml/>");
+}
+
+// ============================================================================
+// HttpMethod Helper Tests
+// ============================================================================
+
+TEST(HttpTest, HttpMethodToStringAll) {
+    EXPECT_STREQ(HttpMethodToString(HttpMethod::GET), "GET");
+    EXPECT_STREQ(HttpMethodToString(HttpMethod::POST), "POST");
+    EXPECT_STREQ(HttpMethodToString(HttpMethod::PUT), "PUT");
+    EXPECT_STREQ(HttpMethodToString(HttpMethod::DELETE), "DELETE");
+    EXPECT_STREQ(HttpMethodToString(HttpMethod::PATCH), "PATCH");
+    EXPECT_STREQ(HttpMethodToString(HttpMethod::HEAD), "HEAD");
+    EXPECT_STREQ(HttpMethodToString(HttpMethod::OPTIONS), "OPTIONS");
+    EXPECT_STREQ(HttpMethodToString(HttpMethod::UNKNOWN), "UNKNOWN");
+}
+
+TEST(HttpTest, HttpMethodFromLlhttpAll) {
+    EXPECT_EQ(HttpMethodFromLlhttp(HTTP_GET), HttpMethod::GET);
+    EXPECT_EQ(HttpMethodFromLlhttp(HTTP_POST), HttpMethod::POST);
+    EXPECT_EQ(HttpMethodFromLlhttp(HTTP_PUT), HttpMethod::PUT);
+    EXPECT_EQ(HttpMethodFromLlhttp(HTTP_DELETE), HttpMethod::DELETE);
+    EXPECT_EQ(HttpMethodFromLlhttp(HTTP_PATCH), HttpMethod::PATCH);
+    EXPECT_EQ(HttpMethodFromLlhttp(HTTP_HEAD), HttpMethod::HEAD);
+    EXPECT_EQ(HttpMethodFromLlhttp(HTTP_OPTIONS), HttpMethod::OPTIONS);
+    // Unknown llhttp method maps to UNKNOWN
+    EXPECT_EQ(HttpMethodFromLlhttp(static_cast<llhttp_method_t>(999)), HttpMethod::UNKNOWN);
+}
+
+// ============================================================================
+// HttpParser Reset Test
+// ============================================================================
+
+TEST(HttpTest, ParserResetAndReuse) {
+    HttpParser parser;
+
+    // Parse first request
+    const char* req1 =
+        "GET /first HTTP/1.1\r\n"
+        "Host: localhost\r\n"
+        "\r\n";
+    ASSERT_TRUE(parser.Parse(req1, strlen(req1)));
+    auto r1 = parser.GetRequest();
+    EXPECT_EQ(r1.path, "/first");
+
+    // Reset and parse second request
+    parser.Reset();
+
+    const char* req2 =
+        "POST /second HTTP/1.1\r\n"
+        "Host: localhost\r\n"
+        "Content-Length: 4\r\n"
+        "\r\n"
+        "data";
+    ASSERT_TRUE(parser.Parse(req2, strlen(req2)));
+    auto r2 = parser.GetRequest();
+    EXPECT_EQ(r2.path, "/second");
+    EXPECT_EQ(r2.method, HttpMethod::POST);
+    EXPECT_EQ(r2.body, "data");
+}

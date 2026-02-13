@@ -250,4 +250,74 @@ TEST(IoUringExecutorTest, CrossThreadPost) {
     EXPECT_TRUE(called);
 }
 
+// ============================================================================
+// ScheduleAfter / Timer Tests
+// ============================================================================
+
+TEST(IoUringExecutorTest, ScheduleAfterDirect) {
+    auto result = IoUringExecutor::Create();
+    ASSERT_TRUE(result.IsOk());
+    auto& executor = *result.Value();
+    bool fired = false;
+    auto start = std::chrono::steady_clock::now();
+
+    auto task = [&]() -> Task<void> {
+        fired = true;
+        executor.Stop();
+        co_return;
+    };
+
+    auto t = task();
+    // Use ScheduleAfter directly (covers the timer_queue_ → ProcessReadyQueue
+    // → io_uring_prep_timeout → ProcessCompletions(Timeout) path)
+    executor.ScheduleAfter(30ms, t.GetHandle());
+    executor.Run();
+
+    auto elapsed = std::chrono::steady_clock::now() - start;
+    EXPECT_TRUE(fired);
+    EXPECT_GE(elapsed, 25ms);
+}
+
+TEST(IoUringExecutorTest, DestructorDrainsOutstandingTimers) {
+    // Create an executor, schedule a timer, then destroy without running.
+    // This exercises the destructor's cleanup of pending_timeouts_ and CQE draining.
+    auto result = IoUringExecutor::Create();
+    ASSERT_TRUE(result.IsOk());
+    auto& executor = *result.Value();
+
+    auto task = [&]() -> Task<void> { co_return; };
+
+    auto t = task();
+    // Schedule timer but don't run — destructor must clean up
+    executor.ScheduleAfter(5000ms, t.GetHandle());
+
+    // Post a callback to process the timer_queue_ and create the kernel timer
+    executor.Post([&]() {
+        // After this, the timer is submitted to io_uring but won't fire for 5s
+        executor.Stop();
+    });
+
+    executor.Run();
+    // Destructor runs here — should drain CQE and delete pending OpContexts
+}
+
+TEST(IoUringExecutorTest, MultiplePostCallbacks) {
+    auto result = IoUringExecutor::Create();
+    ASSERT_TRUE(result.IsOk());
+    auto& executor = *result.Value();
+    int call_count = 0;
+
+    for (int i = 0; i < 5; ++i) {
+        executor.Post([&]() {
+            call_count++;
+            if (call_count == 5) {
+                executor.Stop();
+            }
+        });
+    }
+
+    executor.Run();
+    EXPECT_EQ(call_count, 5);
+}
+
 #endif  // HOTCOCO_HAS_IOURING
