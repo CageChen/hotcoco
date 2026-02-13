@@ -169,6 +169,7 @@ set(HOTCOCO_SOURCES
 if(HAVE_IOURING)
     list(APPEND HOTCOCO_SOURCES src/io/iouring_executor.cpp)
     list(APPEND HOTCOCO_SOURCES src/io/iouring_tcp.cpp)
+    list(APPEND HOTCOCO_SOURCES src/io/iouring_file.cpp)
 endif()
 
 add_library(hotcoco ${HOTCOCO_SOURCES})

@@ -58,9 +58,10 @@
 #include "hotcoco/io/sync_tcp.hpp"
 #include "hotcoco/io/tcp.hpp"
 
-// io_uring networking
+// io_uring networking and file I/O
 #ifdef HOTCOCO_HAS_IOURING
 #include "hotcoco/io/iouring_async_ops.hpp"
+#include "hotcoco/io/iouring_file.hpp"
 #include "hotcoco/io/iouring_tcp.hpp"
 #endif
 
