@@ -32,7 +32,7 @@ int main() {
 - **No exceptions** — `Result<T>` and `std::error_code` everywhere, compiled with `-fno-exceptions`
 - **Pluggable executors** — libuv, io_uring, thread pool, or bring your own
 - **Batteries included** — mutex, semaphore, channels, retry, timeout, cancellation
-- **Educational** — 12 tutorials and extensive inline documentation explaining the *why*, not just the *how*
+- **Educational** — 14 tutorials and extensive inline documentation explaining the *why*, not just the *how*
 
 ## Features
 
@@ -195,6 +195,7 @@ Step-by-step guides covering the *what*, *how*, and *why* of each component:
 10. [Synchronization Primitives](docs/tutorials/10_synchronization_primitives.md) — Mutex, Semaphore, RWLock
 11. [Retry and Error Recovery](docs/tutorials/11_retry_and_error_recovery.md) — exponential backoff
 12. [io_uring Executor](docs/tutorials/12_iouring_executor.md) — high-performance Linux I/O
+13. [std::execution Bridge](docs/tutorials/13_stdexecution_bridge.md) — P2300 sender/receiver adapters
 
 ## Building
 

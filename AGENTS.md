@@ -94,7 +94,6 @@ include/hotcoco/
 │   ├── invoke.hpp        # Coroutine invocation helpers
 │   ├── schedule_on.hpp   # Cross-executor scheduling
 │   ├── detached_task.hpp # Detached task
-│   ├── inspector.hpp     # Runtime metrics collection
 │   ├── check.hpp         # Assertion macros
 │   └── coroutine_compat.hpp # Coroutine compatibility layer
 ├── io/                   # I/O and Executors
@@ -109,6 +108,7 @@ include/hotcoco/
 │   ├── timer.hpp         # AsyncSleep / timers
 │   ├── periodic_timer.hpp # PeriodicTimer
 │   ├── iouring_async_ops.hpp  # io_uring async operations
+│   ├── iouring_file.hpp      # io_uring RAII file I/O
 │   └── thread_utils.hpp  # CPU affinity / thread utilities
 ├── sync/                 # Synchronization primitives
 │   ├── mutex.hpp         # AsyncMutex

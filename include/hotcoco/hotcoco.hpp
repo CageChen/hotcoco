@@ -48,11 +48,13 @@
 // Executors
 #include "hotcoco/io/executor.hpp"
 #include "hotcoco/io/libuv_executor.hpp"
+#include "hotcoco/io/polling_executor.hpp"
 #include "hotcoco/io/thread_pool_executor.hpp"
 #include "hotcoco/io/thread_utils.hpp"
 
 // Timers
 #include "hotcoco/io/periodic_timer.hpp"
+#include "hotcoco/io/timer.hpp"
 
 // Networking
 #include "hotcoco/io/sync_tcp.hpp"
@@ -61,6 +63,7 @@
 // io_uring networking and file I/O
 #ifdef HOTCOCO_HAS_IOURING
 #include "hotcoco/io/iouring_async_ops.hpp"
+#include "hotcoco/io/iouring_executor.hpp"
 #include "hotcoco/io/iouring_file.hpp"
 #include "hotcoco/io/iouring_tcp.hpp"
 #endif
