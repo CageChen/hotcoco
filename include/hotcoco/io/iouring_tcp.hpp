@@ -87,6 +87,10 @@ class IoUringTcpStream {
     // Sets closed_ only on EOF (result==0), not on errors.
     [[nodiscard]] Task<std::vector<char>> Read(size_t max_bytes = 4096);
 
+    // Read using provided buffers. The Executor selects a buffer from its pre-registered ring,
+    // avoiding a user-space allocation per recv. Falls back to Read() if provided_buffers is disabled.
+    [[nodiscard]] Task<std::vector<char>> ReadProvided();
+
     // Write data, returns bytes written or negative error.
     // On partial write followed by error, returns bytes successfully sent.
     [[nodiscard]] Task<ssize_t> Write(std::string_view data);

@@ -2,6 +2,7 @@ add_executable(hotcoco_bench
     core_bench.cpp
     sync_bench.cpp
     file_io_bench.cpp
+    tcp_bench.cpp
 )
 
 target_link_libraries(hotcoco_bench

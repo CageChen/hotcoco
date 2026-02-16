@@ -55,8 +55,26 @@ namespace hotcoco {
 // ============================================================================
 class IoUringExecutor : public Executor {
    public:
+    struct Config {
+        uint32_t queue_depth;
+        bool sqpoll;
+        bool provided_buffers;
+        uint32_t buffer_ring_size;
+        uint32_t buffer_size;
+        uint16_t buffer_group_id;
+
+        Config()
+            : queue_depth(256),
+              sqpoll(false),
+              provided_buffers(false),
+              buffer_ring_size(1024),
+              buffer_size(4096),
+              buffer_group_id(0) {}
+    };
+
     // Static factory — returns Result instead of throwing
-    [[nodiscard]] static Result<std::unique_ptr<IoUringExecutor>, std::error_code> Create(uint32_t queue_depth = 256);
+    [[nodiscard]] static Result<std::unique_ptr<IoUringExecutor>, std::error_code> Create(
+        const Config& config = Config());
     ~IoUringExecutor() override;
 
     // Non-copyable, non-movable (io_uring state can't be moved)
@@ -79,6 +97,14 @@ class IoUringExecutor : public Executor {
     // Access the underlying io_uring ring (for TCP, etc.)
     [[nodiscard]] struct io_uring* GetRing() { return &ring_; }
 
+    [[nodiscard]] const Config& GetConfig() const { return config_; }
+
+    // Provide a buffer slot back to the ring
+    void ReturnBuffer(uint16_t bgid, uint16_t bid);
+
+    // Get the base block of the allocated buffer array
+    [[nodiscard]] char* GetBufferBase() const { return buf_ring_data_; }
+
    public:
     // ========================================================================
     // Types (public for use by IoUringXxx() awaitables)
@@ -96,6 +122,7 @@ class IoUringExecutor : public Executor {
         OpType type;
         std::coroutine_handle<> handle;
         int32_t result = 0;      // CQE result for IO ops
+        uint32_t cqe_flags = 0;  // CQE flags for extra info (e.g., buffer selection)
         __kernel_timespec ts{};  // Owned inline — no separate allocation
     };
 
@@ -122,6 +149,10 @@ class IoUringExecutor : public Executor {
     // ========================================================================
     // State
     // ========================================================================
+    Config config_;
+    struct io_uring_buf_ring* buf_ring_ = nullptr;
+    char* buf_ring_data_ = nullptr;
+
     struct io_uring ring_;
     int eventfd_ = -1;  // For cross-thread wakeup
 
@@ -138,14 +169,17 @@ class IoUringExecutor : public Executor {
     uint64_t eventfd_buf_ = 0;
 
     // Context for the wakeup operation (reused)
-    OpContext wakeup_ctx_{OpType::Wakeup, nullptr, 0, {}};
+    OpContext wakeup_ctx_{OpType::Wakeup, nullptr, 0, 0, {}};
 
     // Track heap-allocated OpContexts (Timeout) so the destructor can free
     // any that are still in-flight in the kernel when the executor is destroyed.
     std::unordered_set<OpContext*> pending_timeouts_;
 
     // Private constructor used by Create()
-    IoUringExecutor(struct io_uring ring, int eventfd);
+    IoUringExecutor(struct io_uring ring, int eventfd, Config config);
+
+    // Setup provided buffer ring
+    Result<void, std::error_code> SetupBufferRing();
 };
 
 }  // namespace hotcoco

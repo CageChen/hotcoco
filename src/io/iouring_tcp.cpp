@@ -173,6 +173,52 @@ Task<std::vector<char>> IoUringTcpStream::Read(size_t max_bytes) {
     co_return std::move(buf);
 }
 
+Task<std::vector<char>> IoUringTcpStream::ReadProvided() {
+    if (!IsOpen()) {
+        co_return std::vector<char>{};
+    }
+
+    if (!executor_.GetConfig().provided_buffers) {
+        // Fallback to normal read if provided buffers are disabled
+        co_return co_await Read();
+    }
+
+    uint16_t bgid = executor_.GetConfig().buffer_group_id;
+    auto result = co_await IoUringRecvProvided(fd_, bgid, 0);
+
+    if (result.res == 0) {
+        // EOF
+        closed_ = true;
+        co_return std::vector<char>{};
+    }
+    if (result.res < 0) {
+        // Error
+        co_return std::vector<char>{};
+    }
+
+    // A buffer was successfully grabbed. Get the buffer ID from the upper 16 bits of flags.
+    if (!(result.flags & IORING_CQE_F_BUFFER)) {
+        // Kernel completed recv but did not assign a provided buffer.
+        // This should not happen with single-shot + IOSQE_BUFFER_SELECT,
+        // but fall back to a normal read as a safety measure.
+        co_return co_await Read();
+    }
+
+    uint16_t bid = result.flags >> 16;
+    size_t bytes_read = static_cast<size_t>(result.res);
+
+    // Retrieve the data from the executor's buffer ring
+    char* base = executor_.GetBufferBase();
+    char* buf_ptr = base + (bid * executor_.GetConfig().buffer_size);
+
+    std::vector<char> data(buf_ptr, buf_ptr + bytes_read);
+
+    // Return the buffer back to the ring
+    executor_.ReturnBuffer(bgid, bid);
+
+    co_return data;
+}
+
 Task<ssize_t> IoUringTcpStream::Write(std::string_view data) {
     if (!IsOpen()) {
         co_return -EBADF;

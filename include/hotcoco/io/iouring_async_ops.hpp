@@ -88,7 +88,7 @@ class IoUringAcceptAwaitable {
     struct sockaddr* addr_;
     socklen_t* addrlen_;
     int flags_;
-    IoUringExecutor::OpContext ctx_{IoUringExecutor::OpType::IO, nullptr, 0, {}};
+    IoUringExecutor::OpContext ctx_{IoUringExecutor::OpType::IO, nullptr, 0, 0, {}};
 };
 
 [[nodiscard]] inline IoUringAcceptAwaitable IoUringAccept(int listen_fd, struct sockaddr* addr = nullptr,
@@ -138,7 +138,7 @@ class IoUringConnectAwaitable {
     int fd_;
     const struct sockaddr* addr_;
     socklen_t addrlen_;
-    IoUringExecutor::OpContext ctx_{IoUringExecutor::OpType::IO, nullptr, 0, {}};
+    IoUringExecutor::OpContext ctx_{IoUringExecutor::OpType::IO, nullptr, 0, 0, {}};
 };
 
 [[nodiscard]] inline IoUringConnectAwaitable IoUringConnect(int fd, const struct sockaddr* addr, socklen_t addrlen) {
@@ -195,6 +195,64 @@ class IoUringRecvAwaitable {
 }
 
 // ============================================================================
+// IoUringRecvProvidedAwaitable (Single-shot Recv with Provided Buffers)
+// ============================================================================
+class IoUringRecvProvidedAwaitable {
+   public:
+    IoUringRecvProvidedAwaitable(int fd, uint16_t bgid, int flags) : fd_(fd), bgid_(bgid), flags_(flags) {}
+
+    // Non-copyable, non-movable
+    IoUringRecvProvidedAwaitable(const IoUringRecvProvidedAwaitable&) = delete;
+    IoUringRecvProvidedAwaitable& operator=(const IoUringRecvProvidedAwaitable&) = delete;
+    IoUringRecvProvidedAwaitable(IoUringRecvProvidedAwaitable&&) = delete;
+    IoUringRecvProvidedAwaitable& operator=(IoUringRecvProvidedAwaitable&&) = delete;
+
+    bool await_ready() const noexcept { return false; }
+
+    bool await_suspend(std::coroutine_handle<> handle) {
+        auto* executor = dynamic_cast<IoUringExecutor*>(GetCurrentExecutor());
+        if (!executor) {
+            ctx_.result = -ENXIO;
+            return false;
+        }
+
+        ctx_.handle = handle;
+        auto* sqe = io_uring_get_sqe(executor->GetRing());
+        if (!sqe) {
+            ctx_.result = -EAGAIN;
+            return false;
+        }
+
+        // Use single-shot receive but tell the kernel to pick a buffer from the ring
+        io_uring_prep_recv(sqe, fd_, nullptr, 0, flags_);
+        sqe->flags |= IOSQE_BUFFER_SELECT;
+        sqe->buf_group = bgid_;
+
+        io_uring_sqe_set_data(sqe, &ctx_);
+        // Do not immediately `io_uring_submit()`. Batching is handled by the executor.
+        return true;
+    }
+
+    // Returns a struct containing both the byte count and the buffer ID chosen by the kernel.
+    struct Result {
+        int32_t res;
+        uint32_t flags;
+    };
+
+    Result await_resume() const noexcept { return {ctx_.result, ctx_.cqe_flags}; }
+
+   private:
+    int fd_;
+    uint16_t bgid_;
+    int flags_;
+    IoUringExecutor::OpContext ctx_{IoUringExecutor::OpType::IO, nullptr, 0, 0, {}};
+};
+
+[[nodiscard]] inline IoUringRecvProvidedAwaitable IoUringRecvProvided(int fd, uint16_t bgid, int flags = 0) {
+    return IoUringRecvProvidedAwaitable(fd, bgid, flags);
+}
+
+// ============================================================================
 // IoUringSendAwaitable
 // ============================================================================
 class IoUringSendAwaitable {
@@ -237,7 +295,7 @@ class IoUringSendAwaitable {
     const void* buf_;
     size_t len_;
     int flags_;
-    IoUringExecutor::OpContext ctx_{IoUringExecutor::OpType::IO, nullptr, 0, {}};
+    IoUringExecutor::OpContext ctx_{IoUringExecutor::OpType::IO, nullptr, 0, 0, {}};
 };
 
 [[nodiscard]] inline IoUringSendAwaitable IoUringSend(int fd, const void* buf, size_t len, int flags = MSG_NOSIGNAL) {
@@ -291,7 +349,7 @@ class IoUringOpenAtAwaitable {
     std::string path_;  // Owned copy — pointer passed to kernel must stay valid
     int flags_;
     mode_t mode_;
-    IoUringExecutor::OpContext ctx_{IoUringExecutor::OpType::IO, nullptr, 0, {}};
+    IoUringExecutor::OpContext ctx_{IoUringExecutor::OpType::IO, nullptr, 0, 0, {}};
 };
 
 [[nodiscard]] inline IoUringOpenAtAwaitable IoUringOpenAt(int dirfd, std::string path, int flags, mode_t mode = 0644) {
@@ -347,7 +405,7 @@ class IoUringReadFileAwaitable {
     void* buf_;
     unsigned nbytes_;
     uint64_t offset_;
-    IoUringExecutor::OpContext ctx_{IoUringExecutor::OpType::IO, nullptr, 0, {}};
+    IoUringExecutor::OpContext ctx_{IoUringExecutor::OpType::IO, nullptr, 0, 0, {}};
 };
 
 [[nodiscard]] inline IoUringReadFileAwaitable IoUringReadFile(int fd, void* buf, unsigned nbytes, uint64_t offset = 0) {
@@ -398,7 +456,7 @@ class IoUringWriteFileAwaitable {
     const void* buf_;
     unsigned nbytes_;
     uint64_t offset_;
-    IoUringExecutor::OpContext ctx_{IoUringExecutor::OpType::IO, nullptr, 0, {}};
+    IoUringExecutor::OpContext ctx_{IoUringExecutor::OpType::IO, nullptr, 0, 0, {}};
 };
 
 [[nodiscard]] inline IoUringWriteFileAwaitable IoUringWriteFile(int fd, const void* buf, unsigned nbytes,
@@ -445,7 +503,7 @@ class IoUringCloseAwaitable {
 
    private:
     int fd_;
-    IoUringExecutor::OpContext ctx_{IoUringExecutor::OpType::IO, nullptr, 0, {}};
+    IoUringExecutor::OpContext ctx_{IoUringExecutor::OpType::IO, nullptr, 0, 0, {}};
 };
 
 [[nodiscard]] inline IoUringCloseAwaitable IoUringClose(int fd) {
@@ -492,7 +550,7 @@ class IoUringFsyncAwaitable {
    private:
     int fd_;
     unsigned flags_;
-    IoUringExecutor::OpContext ctx_{IoUringExecutor::OpType::IO, nullptr, 0, {}};
+    IoUringExecutor::OpContext ctx_{IoUringExecutor::OpType::IO, nullptr, 0, 0, {}};
 };
 
 [[nodiscard]] inline IoUringFsyncAwaitable IoUringFsync(int fd, unsigned flags = 0) {
@@ -543,7 +601,7 @@ class IoUringStatxAwaitable {
     int flags_;
     unsigned mask_;
     struct statx* statxbuf_;
-    IoUringExecutor::OpContext ctx_{IoUringExecutor::OpType::IO, nullptr, 0, {}};
+    IoUringExecutor::OpContext ctx_{IoUringExecutor::OpType::IO, nullptr, 0, 0, {}};
 };
 
 [[nodiscard]] inline IoUringStatxAwaitable IoUringStatx(int dirfd, std::string path, int flags, unsigned mask,
@@ -593,7 +651,7 @@ class IoUringUnlinkAtAwaitable {
     int dirfd_;
     std::string path_;  // Owned copy — pointer passed to kernel must stay valid
     int flags_;
-    IoUringExecutor::OpContext ctx_{IoUringExecutor::OpType::IO, nullptr, 0, {}};
+    IoUringExecutor::OpContext ctx_{IoUringExecutor::OpType::IO, nullptr, 0, 0, {}};
 };
 
 [[nodiscard]] inline IoUringUnlinkAtAwaitable IoUringUnlinkAt(int dirfd, std::string path, int flags = 0) {
@@ -642,7 +700,7 @@ class IoUringMkdirAtAwaitable {
     int dirfd_;
     std::string path_;  // Owned copy — pointer passed to kernel must stay valid
     mode_t mode_;
-    IoUringExecutor::OpContext ctx_{IoUringExecutor::OpType::IO, nullptr, 0, {}};
+    IoUringExecutor::OpContext ctx_{IoUringExecutor::OpType::IO, nullptr, 0, 0, {}};
 };
 
 [[nodiscard]] inline IoUringMkdirAtAwaitable IoUringMkdirAt(int dirfd, std::string path, mode_t mode = 0755) {

@@ -18,15 +18,36 @@ namespace hotcoco {
 // Construction / Destruction
 // ============================================================================
 
-IoUringExecutor::IoUringExecutor(struct io_uring ring, int eventfd) : ring_(ring), eventfd_(eventfd) {
+IoUringExecutor::IoUringExecutor(struct io_uring ring, int eventfd, Config config)
+    : config_(config), ring_(ring), eventfd_(eventfd) {
+    if (config_.provided_buffers) {
+        auto res = SetupBufferRing();
+        if (res.IsErr()) {
+            config_.provided_buffers = false;  // Fallback
+        }
+    }
     SubmitWakeupRead();
+    io_uring_submit(&ring_);  // Ensure the wakeup read SQE is registered with the kernel immediately
 }
 
-Result<std::unique_ptr<IoUringExecutor>, std::error_code> IoUringExecutor::Create(uint32_t queue_depth) {
-    struct io_uring ring;
-    int ret = io_uring_queue_init(queue_depth, &ring, 0);
+Result<std::unique_ptr<IoUringExecutor>, std::error_code> IoUringExecutor::Create(const Config& config) {
+    struct io_uring ring{};
+    struct io_uring_params params{};
+    if (config.sqpoll) {
+        params.flags |= IORING_SETUP_SQPOLL;
+        params.sq_thread_idle = 2000;
+    }
+
+    int ret = io_uring_queue_init_params(config.queue_depth, &ring, &params);
     if (ret < 0) {
-        return Err(make_error_code(Errc::IoUringInitFailed));
+        // Fallback if SQPOLL is requested but not permitted (e.g. without CAP_SYS_ADMIN/sysctls)
+        if (config.sqpoll && ret == -EPERM) {
+            params.flags &= ~IORING_SETUP_SQPOLL;
+            ret = io_uring_queue_init_params(config.queue_depth, &ring, &params);
+        }
+        if (ret < 0) {
+            return Err(make_error_code(Errc::IoUringInitFailed));
+        }
     }
 
     int efd = eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC);
@@ -35,7 +56,7 @@ Result<std::unique_ptr<IoUringExecutor>, std::error_code> IoUringExecutor::Creat
         return Err(make_error_code(Errc::EventfdFailed));
     }
 
-    return Ok(std::unique_ptr<IoUringExecutor>(new IoUringExecutor(ring, efd)));
+    return Ok(std::unique_ptr<IoUringExecutor>(new IoUringExecutor(ring, efd, config)));
 }
 
 IoUringExecutor::~IoUringExecutor() {
@@ -44,8 +65,8 @@ IoUringExecutor::~IoUringExecutor() {
     }
 
     // Drain any CQEs that arrived between the last ProcessCompletions() and now
-    struct io_uring_cqe* cqe;
-    unsigned head;
+    struct io_uring_cqe* cqe = nullptr;
+    unsigned head = 0;
     unsigned count = 0;
     io_uring_for_each_cqe(&ring_, head, cqe) {
         ++count;
@@ -66,11 +87,65 @@ IoUringExecutor::~IoUringExecutor() {
     }
     pending_timeouts_.clear();
 
+    if (buf_ring_) {
+        io_uring_unregister_buf_ring(&ring_, config_.buffer_group_id);
+        io_uring_free_buf_ring(&ring_, buf_ring_, config_.buffer_ring_size, config_.buffer_group_id);
+        buf_ring_ = nullptr;
+    }
+
+    if (buf_ring_data_) {
+        // buf_ring_data is typically allocated by posix_memalign
+        free(buf_ring_data_);
+        buf_ring_data_ = nullptr;
+    }
+
     if (eventfd_ >= 0) {
         close(eventfd_);
     }
 
     io_uring_queue_exit(&ring_);
+}
+
+// ============================================================================
+// Buffer Ring Setup
+// ============================================================================
+
+Result<void, std::error_code> IoUringExecutor::SetupBufferRing() {
+    // 1. Setup the buffer ring via liburing
+    int ret = 0;
+    buf_ring_ = io_uring_setup_buf_ring(&ring_, config_.buffer_ring_size, config_.buffer_group_id, 0, &ret);
+    if (!buf_ring_) {
+        return Err(make_error_code(Errc::IoUringInitFailed));  // Needs newer kernel
+    }
+
+    // 2. Allocate the actual data buffers (page-aligned)
+    size_t total_size = static_cast<size_t>(config_.buffer_ring_size) * config_.buffer_size;
+    if (posix_memalign(reinterpret_cast<void**>(&buf_ring_data_), 4096, total_size) != 0) {
+        io_uring_free_buf_ring(&ring_, buf_ring_, config_.buffer_ring_size, config_.buffer_group_id);
+        buf_ring_ = nullptr;
+        return Err(make_error_code(Errc::IoUringInitFailed));
+    }
+
+    // 3. Populate the ring with all buffers initially
+    io_uring_buf_ring_init(buf_ring_);
+    for (uint16_t i = 0; i < config_.buffer_ring_size; ++i) {
+        char* buf_ptr = buf_ring_data_ + (i * config_.buffer_size);
+        io_uring_buf_ring_add(buf_ring_, buf_ptr, config_.buffer_size, i,
+                              io_uring_buf_ring_mask(config_.buffer_ring_size), i);
+    }
+    io_uring_buf_ring_advance(buf_ring_, config_.buffer_ring_size);
+
+    return Ok();
+}
+
+void IoUringExecutor::ReturnBuffer(uint16_t bgid, uint16_t bid) {
+    if (!buf_ring_ || bgid != config_.buffer_group_id || bid >= config_.buffer_ring_size) {
+        return;
+    }
+    char* buf_ptr = buf_ring_data_ + (bid * config_.buffer_size);
+    io_uring_buf_ring_add(buf_ring_, buf_ptr, config_.buffer_size, bid,
+                          io_uring_buf_ring_mask(config_.buffer_ring_size), 0);
+    io_uring_buf_ring_advance(buf_ring_, 1);
 }
 
 // ============================================================================
@@ -85,9 +160,18 @@ void IoUringExecutor::Run() {
     ExecutorGuard guard(this);
 
     while (!stop_requested_) {
-        // Wait for at least one completion
+        // Submit any pending SQEs and wait for at least one completion
         struct io_uring_cqe* cqe;
-        int ret = io_uring_wait_cqe(&ring_, &cqe);
+        int ret = io_uring_submit_and_wait(&ring_, 1);
+        if (ret < 0) {
+            ret = io_uring_wait_cqe(&ring_, &cqe);
+        } else {
+            ret = io_uring_peek_cqe(&ring_, &cqe);
+            if (ret == -EAGAIN) {
+                ret = io_uring_wait_cqe(&ring_, &cqe);
+            }
+        }
+
         if (ret < 0) {
             if (ret == -EINTR) {
                 continue;  // Interrupted, retry
@@ -108,7 +192,9 @@ void IoUringExecutor::Run() {
 void IoUringExecutor::RunOnce() {
     ExecutorGuard guard(this);
 
-    // Non-blocking: peek for completions
+    // Submit pending SQEs and peek for completions non-blocking
+    io_uring_submit(&ring_);
+
     struct io_uring_cqe* cqe;
     unsigned head;
     unsigned count = 0;
@@ -209,6 +295,7 @@ void IoUringExecutor::ProcessCompletions() {
                     // Generic I/O completion — store result and resume
                     // OpContext lives on the coroutine frame, NOT deleted here
                     ctx->result = cqe->res;
+                    ctx->cqe_flags = cqe->flags;
                     if (ctx->handle) {
                         ctx->handle.resume();
                     }
@@ -277,7 +364,6 @@ void IoUringExecutor::ProcessReadyQueue() {
 
         io_uring_prep_timeout(sqe, &ctx->ts, 0, 0);
         io_uring_sqe_set_data(sqe, ctx);
-        io_uring_submit(&ring_);
         pending_timeouts_.insert(ctx);
     }
 }
@@ -290,8 +376,6 @@ void IoUringExecutor::SubmitWakeupRead() {
 
     io_uring_prep_read(sqe, eventfd_, &eventfd_buf_, sizeof(eventfd_buf_), 0);
     io_uring_sqe_set_data(sqe, &wakeup_ctx_);
-
-    io_uring_submit(&ring_);
 }
 
 }  // namespace hotcoco
