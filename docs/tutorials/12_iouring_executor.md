@@ -241,8 +241,8 @@ void ScheduleAfter(milliseconds delay, coroutine_handle<> h) {
 
 ## Next Steps
 
-With io_uring support, hotcoco is ready for high-performance Linux applications. Future enhancements may include:
+With io_uring support in place, explore the features built on top of it:
 
-- io_uring-based TCP networking (IORING_OP_ACCEPT, RECV, SEND)
-- Zero-copy receive (ZCRX) for ultimate network performance
-- io_uring-based file I/O
+- [Tutorial 14: io_uring File Operations](14_iouring_file_operations.md) — async file I/O with RAII
+- io_uring TCP networking is available via `IoUringTcpListener` / `IoUringTcpStream` (`iouring_tcp.hpp`)
+- Zero-copy receive (ZCRX) for ultimate network performance (future)

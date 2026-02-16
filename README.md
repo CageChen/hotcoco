@@ -196,6 +196,7 @@ Step-by-step guides covering the *what*, *how*, and *why* of each component:
 11. [Retry and Error Recovery](docs/tutorials/11_retry_and_error_recovery.md) — exponential backoff
 12. [io_uring Executor](docs/tutorials/12_iouring_executor.md) — high-performance Linux I/O
 13. [std::execution Bridge](docs/tutorials/13_stdexecution_bridge.md) — P2300 sender/receiver adapters
+14. [io_uring File Operations](docs/tutorials/14_iouring_file_operations.md) — async file I/O with RAII
 
 ## Building
 
