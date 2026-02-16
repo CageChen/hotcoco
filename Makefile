@@ -1,4 +1,4 @@
-.PHONY: build test test-asan test-tsan test-all clean format check-format lint setup coverage
+.PHONY: build test test-asan test-tsan test-all clean format check-format lint setup coverage bench
 
 BUILD_DIR       := build
 BUILD_ASAN_DIR  := build-asan
@@ -66,3 +66,9 @@ coverage:
 	        --output-directory $(BUILD_COV_DIR)/coverage-report \
 	        --title "Hotcoco Coverage" --legend
 	@echo "Coverage report: $(BUILD_COV_DIR)/coverage-report/index.html"
+
+# --- Benchmarks (Release, -O3) ---
+bench:
+	cmake -B $(BUILD_DIR) -G Ninja -DCMAKE_BUILD_TYPE=Release -DBUILD_BENCHMARKS=ON -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+	ninja -C $(BUILD_DIR) -j$(NPROC) hotcoco_bench
+	./$(BUILD_DIR)/benchmarks/hotcoco_bench --benchmark_counters_tabular=true
